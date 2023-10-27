@@ -1,4 +1,25 @@
-import Calendar, { CalendarTileProperties } from 'react-calendar';
+import Calendar from 'react-calendar';
+
+import type {
+  Action,
+  CalendarType,
+  ClassName,
+  DeprecatedCalendarType,
+  Detail,
+  LooseValue,
+  NavigationLabelFunc,
+  OnArgs,
+  OnClickFunc,
+  OnClickWeekNumberFunc,
+  Range,
+  TileArgs,
+  TileClassNameFunc,
+  TileContentFunc,
+  TileDisabledFunc,
+  Value,
+  View,
+} from 'react-calendar/dist/esm/shared/types.js';
+
 import { Locale, format, getDay, isValid, startOfMonth } from 'date-fns';
 import React, { useEffect, useState } from 'react';
 import { setup, styled } from 'goober';
@@ -230,17 +251,18 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ availableTimeslots, onDaySe
     onDaySelected(day);
   };
 
-  const _isTileDisabled = (props: CalendarTileProperties) => {
+  const _isTileDisabled = (props: TileArgs) => {
     return props.view === 'month' && !daysAvailable.some((date) => date === formatDate(props.date, locale));
   };
 
-  const _renderClassName = (props: CalendarTileProperties) => {
+  const _renderClassName = (props: TileArgs) => {
     if (daysAvailable.some((date) => date === formatDate(props.date, locale))) return ['day-tile', 'active-day-tile'];
     return (props.view === 'month' && 'day-tile') || null;
   };
 
   return (
     <StyledCalendar
+      showNeighboringMonth={false}
       defaultView={'month'}
       onClickDay={_onClickDay}
       showNavigation={false}

@@ -29,7 +29,7 @@ type StyleVariables = {
   $backgroundColorRGB: string;
   $primaryColorContrastRGB: string;
   $calendarColoredTextRGB: string;
-}; 
+};
 
 const Container = styled('div')<StyleVariables>`
   width: 100%;
@@ -47,12 +47,12 @@ const Container = styled('div')<StyleVariables>`
 `;
 
 const Inner = styled('div')`
+  position: relative;
   display: flex;
   border-radius: var(--border-radius);
   background: rgba(var(--background-color-rgb), 1);
-  box-shadow: 0 5px 22px rgba(20, 21, 21, 0.22), 0px 1px 4px rgba(20, 21, 21, 0.14);
+  box-shadow: 0 5px 22px rgba(100, 100, 100, 0.22), 0px 1px 4px rgba(20, 21, 21, 0.14);
   padding: 16px;
-  margin: 16px;
   flex-direction: column;
   @media (min-width: 768px) {
     flex-direction: row;
@@ -74,8 +74,31 @@ const Divider = styled('div')`
 `;
 
 const CalendarContainer = styled('div')`
-  flex: 1;
+  flex: 1.5;
 `;
+
+const OverlayMessageWrapper = styled('div')`
+    height: auto;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+`;
+
+const OverlayMessage = styled('div')`
+  color: white;
+  display: block;
+  position: absolute;
+  background: black;
+  opacity: 0.7;
+  padding: 4rem;
+  border-radius: 3rem;
+  z-index: 2;
+`;
+
 
 const StartTimeListContainer = styled('div')`
   flex: 1;
@@ -98,7 +121,7 @@ const SelectedDayTitle = styled('h3')`
   margin: 0;
   padding: 0;
   font-weight: 700;
-  font-size: 24px;
+  font-size: 18px;
   color: rgba(var(--text-color-rgb), 1);
 `;
 
@@ -130,9 +153,24 @@ const ArrowButton = styled('button')`
 `;
 
 export type AvailableTimeslot = {
+  displayText: string;
   startTime: Date | string;
   endTime: Date | string;
   id?: string | number | undefined;
+};
+
+export type Host = {
+  user_id?: string | number | undefined;
+  avatar_url: string;
+  full_name: string;
+};
+
+export type Scheduler = {
+  id: string | number | undefined;
+  title: string;
+  description: string;
+  duration: string;
+  timezone: string;
 };
 
 export type SplitTimeslot = null | ModifiedTimeslot;
@@ -142,6 +180,7 @@ export type ModifiedTimeslot = AvailableTimeslot & {
 };
 
 export type StartTimeEvent = {
+  displayText: string;
   availableTimeslot: AvailableTimeslot;
   startTime: Date;
 };
@@ -153,6 +192,8 @@ export type StartTimeEventEmit = StartTimeEvent & {
 };
 
 type Props = {
+  host: Host;
+  scheduler: Scheduler;
   availableTimeslots: AvailableTimeslot[];
   backgroundColor?: string;
   borderRadius?: number;
@@ -161,6 +202,8 @@ type Props = {
   emptyListContentEl?: React.ElementType;
   eventDurationInMinutes: number;
   eventStartTimeSpreadInMinutes?: number;
+  loading?: boolean;
+  submitting?: boolean;
   format_nextFutureStartTimeAvailableFormatString?: string;
   format_selectedDateDayTitleFormatString?: string;
   format_selectedDateMonthTitleFormatString?: string;
@@ -175,6 +218,7 @@ type Props = {
   onNoFutureTimesAvailable?: (selectedDate: Date) => void;
   onSelectedDayChange?: (day: Date) => void;
   onStartTimeSelect?: (startTimeEventEmit: StartTimeEventEmit) => void;
+  onActiveStartDateChange?: (activeStartDate: Date) => void;
   primaryColor?: string;
   scheduleMeetingStyles?: React.CSSProperties;
   selectedStartTime?: Date;
@@ -184,6 +228,8 @@ type Props = {
 };
 
 export const ScheduleMeeting: React.FC<Props> = ({
+  host = {},
+  scheduler = {},
   availableTimeslots = [],
   backgroundColor = '#ffffff',
   borderRadius = 0,
@@ -192,6 +238,8 @@ export const ScheduleMeeting: React.FC<Props> = ({
   emptyListContentEl,
   eventDurationInMinutes = 30,
   eventStartTimeSpreadInMinutes = 0,
+  loading = true,
+  submitting = false,
   format_nextFutureStartTimeAvailableFormatString = 'cccc, LLLL do',
   format_selectedDateDayTitleFormatString = 'cccc, LLLL do',
   format_selectedDateMonthTitleFormatString = 'LLLL yyyy',
@@ -206,6 +254,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
   onNoFutureTimesAvailable,
   onSelectedDayChange,
   onStartTimeSelect,
+  onActiveStartDateChange,
   primaryColor = '#3f5b85',
   scheduleMeetingStyles,
   selectedStartTime: _selectedStartTime,
@@ -259,6 +308,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
 
     if (minutesIntoTimeslotEventWillStart !== 0) {
       const newFirstTimeslot: SplitTimeslot = {
+        displayText: startTimeEvent.availableTimeslot.displayText,
         oldId: startTimeEvent.availableTimeslot.id,
         startTime: startTimeEvent.availableTimeslot.startTime,
         endTime: addMinutes(new Date(startTimeEvent.availableTimeslot.startTime), minutesIntoTimeslotEventWillStart),
@@ -272,6 +322,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
     );
     if (differenceInMinutes(startTimeOfEndingSplitTimeslot, new Date(startTimeEvent.availableTimeslot.endTime)) !== 0) {
       const newSecondTimeslot: SplitTimeslot = {
+        displayText: startTimeEvent.availableTimeslot.displayText,
         oldId: startTimeEvent.availableTimeslot.id,
         startTime: startTimeOfEndingSplitTimeslot,
         endTime: startTimeEvent.availableTimeslot.endTime,
@@ -315,6 +366,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
 
       while (startTimesPossible >= 0) {
         const newStartTimeEvent: StartTimeEvent = {
+          displayText: availableTimeslot.displayText,
           availableTimeslot,
           startTime: addMinutes(
             new Date(availableTimeslot.startTime),
@@ -375,20 +427,26 @@ export const ScheduleMeeting: React.FC<Props> = ({
     setSelectedDayStartTimeEventsList(orderedEvents);
   }, [selectedDay, startTimeEventsList]);
 
+
+  const updateCalendar = (activeStartDate: Date) => {
+    setSelectedDay(activeStartDate);
+    onActiveStartDateChange && onActiveStartDateChange(activeStartDate);
+  };
+
   const goToPreviousMonth = () => {
-    setSelectedDay(subMonths(selectedDay, 1));
+    updateCalendar(subMonths(selectedDay, 1));
   };
 
   const goToNextMonth = () => {
-    setSelectedDay(addMonths(selectedDay, 1));
+    updateCalendar(addMonths(selectedDay, 1));
   };
 
   const goToPreviousDay = () => {
-    setSelectedDay(subDays(selectedDay, 1));
+    updateCalendar(subDays(selectedDay, 1));
   };
 
   const goToNextDay = () => {
-    setSelectedDay(addDays(selectedDay, 1));
+    updateCalendar(addDays(selectedDay, 1));
   };
 
   const handleGoToNextAvailableDay = () => {
@@ -397,7 +455,59 @@ export const ScheduleMeeting: React.FC<Props> = ({
     }
   };
 
-  return (
+  const renderOverlayMessage = () => {
+    if (loading) {
+      return(
+        <OverlayMessageWrapper>
+          <OverlayMessage>
+            <h3>Loading...</h3>
+            <div className='loader space-above-2'></div>
+          </OverlayMessage>
+        </OverlayMessageWrapper>
+      )
+    }
+
+    else if (submitting) {
+      return(
+        <OverlayMessageWrapper>
+          <OverlayMessage>
+            <h3>Submitting...</h3>
+            <div className='loader space-above-2'></div>
+          </OverlayMessage>
+        </OverlayMessageWrapper>
+      )
+    }
+  };
+
+  const overlay_opacity = () => {
+    let shown = (loading || submitting);
+
+    return (shown ? '0.25' : '1')
+  }
+
+  const SchedulerDetailsContainer = () => (
+    <div className="row p-3" style={{display: 'flow', flex: '0.75 1 0%', opacity: overlay_opacity()}}>
+      <div className="col-sm-12 space-above-1">
+        <div className="mb-2" style={{color: 'rgb(75, 75, 75)'}}>
+          <i className="bi bi-clock me-2 fs-3"></i>
+          <strong>{scheduler.duration}</strong>
+        </div>
+        <h3 className="">{scheduler.title}</h3>
+        <p className="space-below-4 space-above-1" style={{color: 'rgb(75, 75, 75)'}}>{scheduler.description}</p>
+      </div>
+
+      <div className="col-sm-12 mb-3">
+        <strong className="">Hosted By</strong>
+      </div>
+
+      <div className="col-sm-12" style={{width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+        <img className="" src={host.avatar_url} style={{width: '8rem', height: '8rem', display: 'flex', flex: 1, borderRadius: '50%', objectFit: 'cover'}}/>
+        <div style={{display: 'flex', flex: 4, marginLeft: '1rem'}}>{host.full_name}</div>
+      </div>
+    </div>
+  )
+
+  return(
     <Container
       className={className}
       $primaryColorRGB={primaryColorRGB}
@@ -410,7 +520,11 @@ export const ScheduleMeeting: React.FC<Props> = ({
       $calendarColoredTextRGB={calendarColoredTextRGB}
     >
       <Inner>
-        <CalendarContainer>
+        {renderOverlayMessage()}
+
+        <SchedulerDetailsContainer />
+
+        <CalendarContainer style={{opacity: overlay_opacity()}}>
           <Header>
             <ArrowButton type="button" className="rsm-arrow-button" onClick={goToPreviousMonth}>
               <Arrow direction="back" />
@@ -429,8 +543,10 @@ export const ScheduleMeeting: React.FC<Props> = ({
             onDaySelected={onDaySelected}
           />
         </CalendarContainer>
+
         <Divider />
-        <StartTimeListContainer>
+
+        <StartTimeListContainer style={{opacity: overlay_opacity()}}>
           <StartTimeListContainerAbsolute>
             <Header>
               <ArrowButton type="button" className="rsm-arrow-button" onClick={goToPreviousDay}>
