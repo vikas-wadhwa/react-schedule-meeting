@@ -148,18 +148,25 @@ const StyledCalendar = styled(Calendar)`
   }
 
   .react-calendar__tile--now.day-tile {
-    background: rgba(var(--background-color-rgb), 1);
+    color: white !important;
+
     &::after {
       border-radius: var(--border-radius);
-      background: rgba(var(--primary-color-rgb), 0.111);
+      background: rgba(150, 150, 150, 1);
+      border: none;
     }
   }
 
   .react-calendar__tile--now:hover.day-tile {
-    background: rgba(var(--background-color-rgb), 1);
+    border: none;
+    border-radius: var(--border-radius);
+    background: rgba(150, 150, 150, 1);
+    color: white !important;
+
     &::after {
       border-radius: var(--border-radius);
-      background: rgba(var(--primary-color-rgb), 0.111);
+      background: rgba(150, 150, 150, 1);
+      border: none;
     }
   }
 
@@ -170,9 +177,10 @@ const StyledCalendar = styled(Calendar)`
   .react-calendar__tile--active.day-tile {
     background: rgba(var(--background-color-rgb), 1);
     color: rgba(var(--primary-color-text-shade-rgb), 1);
+
     &::after {
       border-radius: var(--border-radius);
-      border: solid rgba(var(--primary-color-rgb), 0.111) 1px;
+      border: none;
     }
   }
 
@@ -183,9 +191,14 @@ const StyledCalendar = styled(Calendar)`
       border-radius: var(--border-radius);
       border: solid rgba(var(--primary-color-rgb), 1) 1px;
     }
+
     &.react-calendar__tile--now {
+      color: white !important;
+
       &::after {
-        background: rgba(var(--primary-color-rgb), 0.111);
+        border-radius: var(--border-radius);
+        background: rgba(150, 150, 150, 1);
+        border: none;
       }
     }
   }
@@ -270,6 +283,7 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ availableTimeslots, onDaySe
       tileClassName={_renderClassName}
       value={selectedDay}
       activeStartDate={startOfMonth(selectedDay)}
+      calendarType={'gregory'}
     />
   );
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StartTimeEvent } from './ScheduleMeeting';
-import { ThemedButton } from '../ThemedButton';
+import { StartTimeListButton, StartTimeGridItemButton, StartTimeConfirmButton } from '../Buttons';
 import { format } from 'date-fns';
 import { styled } from 'goober';
 
@@ -23,7 +23,7 @@ const Container = styled('div')`
   align-items: center;
 `;
 
-const CancelButton = styled('button')`
+const ConfirmButton = styled('button')`
   padding: 8px 24px;
   border: none;
   background-color: rgb(0, 0, 0, 0);
@@ -54,22 +54,24 @@ const StartTimeListItem: React.FC<Props> = ({
   lang_selectedButtonText,
   locale,
 }) => {
+
+  let chosen = Boolean(selected || confirmState);
+
   return (
     <Container className="rsm-start-time-item">
-      <ThemedButton
+      <StartTimeListButton
         type="button"
-        className="rsm-confirm-button"
-        selected={Boolean(selected || confirmState)}
-        onClick={onStartTimeSelect}
+        className="rsm-cancel-button"
+        selected={chosen}
+        onClick={chosen ? onCancelClicked : onStartTimeSelect}
       >
-        {confirmState && !selected && `${lang_confirmButtonText} `}
-        {selected && `${lang_selectedButtonText} `}
         {startTimeEvent.displayText}
-      </ThemedButton>
+      </StartTimeListButton>
+
       {(confirmState || selected) && (
-        <CancelButton type="button" className="rsm-cancel-button" onClick={onCancelClicked}>
-          {lang_cancelButtonText}
-        </CancelButton>
+        <StartTimeConfirmButton type="button" className="rsm-confirm-button" onClick={onStartTimeSelect}>
+          {lang_confirmButtonText}
+        </StartTimeConfirmButton>
       )}
     </Container>
   );

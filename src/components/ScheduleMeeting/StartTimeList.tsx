@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StartTimeGridItemButton, ThemedButton } from '../ThemedButton';
+import { StartTimeListButton, StartTimeGridItemButton } from '../Buttons';
 
 import { Arrow } from '../ArrowSVG';
 import EventListItem from './StartTimeListItem';
@@ -99,7 +99,7 @@ const NoTimesAvailableContainer = styled('div')`
   flex-direction: column;
 `;
 
-const GoToNextAvailableDayButton = styled(ThemedButton)`
+const GoToNextAvailableDayButton = styled(StartTimeListButton)`
   border: none;
   padding: 6px 18px;
   width: auto;
@@ -182,7 +182,7 @@ const StartTimeList: React.FC<Props> = ({
               {format(nextFutureStartTimeAvailable, format_nextFutureStartTimeAvailableFormatString, { locale })}
             </p>
 
-            <Arrow direction="forward" />
+            {/*<Arrow direction="forward" />*/}
           </GoToNextAvailableDayButton>
         ) : (
           <NoFutureTimesText className="rsm-no-future-times-text">{lang_noFutureTimesText}</NoFutureTimesText>

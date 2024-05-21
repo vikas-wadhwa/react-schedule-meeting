@@ -66,7 +66,7 @@ const Inner = styled('div')`
 const Divider = styled('div')`
   width: 1px;
   background: rgba(0, 0, 0, 0.1);
-  margin: 16px;
+  margin: 2rem;
   @media (max-width: 768px) {
     width: auto;
     height: 1px;
@@ -118,10 +118,12 @@ const StartTimeListContainerAbsolute = styled('div')`
 `;
 
 const SelectedDayTitle = styled('h3')`
+  width: 100%;
   margin: 0;
   padding: 0;
   font-weight: 700;
   font-size: 18px;
+  text-align: center;
   color: rgba(var(--text-color-rgb), 1);
 `;
 
@@ -161,6 +163,7 @@ export type AvailableTimeslot = {
 
 export type Host = {
   user_id?: string | number | undefined;
+  email: string;
   avatar_url: string;
   full_name: string;
 };
@@ -244,7 +247,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
   format_selectedDateDayTitleFormatString = 'cccc, LLLL do',
   format_selectedDateMonthTitleFormatString = 'LLLL yyyy',
   format_startTimeFormatString = 'h:mm a',
-  lang_cancelButtonText = 'Cancel',
+  lang_cancelButtonText = '',
   lang_confirmButtonText = 'Confirm',
   lang_emptyListText = 'No times available',
   lang_goToNextAvailableDayText = 'Next Available',
@@ -486,7 +489,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
   }
 
   const SchedulerDetailsContainer = () => (
-    <div className="row p-3" style={{display: 'flow', flex: '0.75 1 0%', opacity: overlay_opacity()}}>
+    <div className="row p-3" style={{display: 'flow', flex: '1 1 0%', opacity: overlay_opacity()}}>
       <div className="col-sm-12 space-above-1">
         <div className="mb-2" style={{color: 'rgb(75, 75, 75)'}}>
           <i className="bi bi-clock me-2 fs-3"></i>
@@ -502,7 +505,10 @@ export const ScheduleMeeting: React.FC<Props> = ({
 
       <div className="col-sm-12" style={{width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
         <img className="" src={host.avatar_url} style={{width: '8rem', height: '8rem', display: 'flex', flex: 1, borderRadius: '50%', objectFit: 'cover'}}/>
-        <div style={{display: 'flex', flex: 4, marginLeft: '1rem'}}>{host.full_name}</div>
+        <div style={{flex: 4, marginLeft: '1rem'}}>
+          <div><strong>{host.full_name}</strong></div>
+          <div>{host.email}</div>
+        </div>
       </div>
     </div>
   )
@@ -523,6 +529,8 @@ export const ScheduleMeeting: React.FC<Props> = ({
         {renderOverlayMessage()}
 
         <SchedulerDetailsContainer />
+
+        <Divider />
 
         <CalendarContainer style={{opacity: overlay_opacity()}}>
           <Header>
@@ -549,15 +557,15 @@ export const ScheduleMeeting: React.FC<Props> = ({
         <StartTimeListContainer style={{opacity: overlay_opacity()}}>
           <StartTimeListContainerAbsolute>
             <Header>
-              <ArrowButton type="button" className="rsm-arrow-button" onClick={goToPreviousDay}>
+{/*              <ArrowButton type="button" className="rsm-arrow-button" onClick={goToPreviousDay}>
                 <Arrow direction="back" />
-              </ArrowButton>
+              </ArrowButton>*/}
               <SelectedDayTitle className="rsm-date-title">
                 {format(selectedDay, format_selectedDateDayTitleFormatString, { locale })}
               </SelectedDayTitle>
-              <ArrowButton type="button" className="rsm-arrow-button" onClick={goToNextDay}>
+{/*              <ArrowButton type="button" className="rsm-arrow-button" onClick={goToNextDay}>
                 <Arrow direction="forward" />
-              </ArrowButton>
+              </ArrowButton>*/}
             </Header>
             <StartTimeList
               skipConfirmCheck={skipConfirmCheck}

@@ -8,6 +8,7 @@ export type AvailableTimeslot = {
 };
 export type Host = {
     user_id?: string | number | undefined;
+    email: string;
     avatar_url: string;
     full_name: string;
 };

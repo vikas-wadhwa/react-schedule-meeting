@@ -23,7 +23,7 @@ export default [
     output: [
       { file: pkg.module, format: 'esm' },
       {
-        file: 'docs/src/reactComponentLib/index.js',
+        file: 'dist/index.esm.js',
         format: 'es',
         banner: '/* eslint-disable */',
       },

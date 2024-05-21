@@ -4,12 +4,11 @@ type ButtonProps = {
   selected?: boolean;
 };
 
-export const ThemedButton = styled('button')<ButtonProps>`
+export const StartTimeListButton = styled('button')<ButtonProps>`
   padding: 16px;
   border: none;
-  color: ${({ selected }) =>
-    selected ? `rgba(var(--primary-color-contrast-rgb), 1)` : `rgba(var(--text-color-rgb), 1)`};
-  background-color: ${({ selected }) => (selected ? 'rgba(var(--primary-color-rgb), 1)' : `rgba(0,0,0,0)`)};
+  color: rgba(var(--text-color-rgb), 1);
+  background-color: rgba(0,0,0,0);
   border-radius: var(--border-radius);
   outline: none;
   width: 100%;
@@ -18,8 +17,7 @@ export const ThemedButton = styled('button')<ButtonProps>`
   opacity: 1;
   &:hover {
     opacity: 0.8;
-    background-color: ${({ selected }) =>
-      selected ? 'rgba(var(--primary-color-rgb), 1)' : 'rgba(var(--background-color-contrast-rgb), 0.06)'};
+    background-color: rgba(var(--background-color-contrast-rgb), 0.06);
   }
 `;
 
@@ -39,5 +37,22 @@ export const StartTimeGridItemButton = styled('button')<ButtonProps>`
   }
   :hover {
     opacity: 0.8;
+  }
+`;
+
+export const StartTimeConfirmButton = styled('button')<ButtonProps>`
+  padding: 16px;
+  border: none;
+  color: rgba(var(--primary-color-contrast-rgb), 1);
+  background-color: rgba(var(--primary-color-rgb), 1);
+  border-radius: var(--border-radius);
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+  font-size: 16px;
+  opacity: 1;
+  &:hover {
+    opacity: 0.8;
+    background-color: rgba(var(--primary-color-rgb), 1);
   }
 `;
