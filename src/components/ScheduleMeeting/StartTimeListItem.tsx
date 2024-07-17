@@ -1,7 +1,8 @@
 import React from 'react';
 import { StartTimeEvent } from './ScheduleMeeting';
 import { StartTimeListButton, StartTimeGridItemButton, StartTimeConfirmButton } from '../Buttons';
-import { format } from 'date-fns';
+import { Locale, getDay, isValid, startOfMonth } from 'date-fns';
+import { format, formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { styled } from 'goober';
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
   lang_cancelButtonText: string;
   lang_selectedButtonText: string;
   locale?: Locale;
+  timezone: string;
 };
 
 const Container = styled('div')`
@@ -53,6 +55,7 @@ const StartTimeListItem: React.FC<Props> = ({
   lang_cancelButtonText,
   lang_selectedButtonText,
   locale,
+  timezone,
 }) => {
 
   let chosen = Boolean(selected || confirmState);
@@ -65,7 +68,7 @@ const StartTimeListItem: React.FC<Props> = ({
         selected={chosen}
         onClick={chosen ? onCancelClicked : onStartTimeSelect}
       >
-        {startTimeEvent.displayText}
+        {formatInTimeZone(startTimeEvent.startTime, timezone, format_startTimeFormatString)}
       </StartTimeListButton>
 
       {(confirmState || selected) && (

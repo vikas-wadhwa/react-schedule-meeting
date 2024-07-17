@@ -4,7 +4,8 @@ import { StartTimeListButton, StartTimeGridItemButton } from '../Buttons';
 import { Arrow } from '../ArrowSVG';
 import EventListItem from './StartTimeListItem';
 import { StartTimeEvent } from './ScheduleMeeting';
-import { format } from 'date-fns';
+import { Locale, getDay, isValid, startOfMonth } from 'date-fns';
+import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { styled } from 'goober';
 
 // @TODO okay this is getting a little silly maybe its time to consider context.
@@ -28,6 +29,8 @@ type Props = {
   format_nextFutureStartTimeAvailableFormatString: string;
   startTimeListStyle?: 'scroll-list' | 'grid';
   locale?: Locale;
+  timezone: string;
+  eventDurationInMinutes: number;
 };
 
 const ScrollListContainer = styled('div')`
@@ -61,14 +64,6 @@ const ScrollEdgeFade = styled('div')`
   right: 0;
   z-index: 12;
   pointer-events: none;
-  &.top {
-    background: linear-gradient(180deg, rgba(var(--background-color-rgb), 1), rgba(var(--background-color-rgb), 0));
-    top: 42px;
-  }
-  &.bottom {
-    bottom: 0;
-    background: linear-gradient(0deg, rgba(var(--background-color-rgb), 1), rgba(var(--background-color-rgb), 0));
-  }
 `;
 
 const ListItemDivider = styled('div')<{ makeTransparent: boolean }>`
@@ -149,6 +144,8 @@ const StartTimeList: React.FC<Props> = ({
   startTimeListStyle,
   setSelectedStartTime,
   locale,
+  timezone,
+  eventDurationInMinutes
 }) => {
   const [selectedItemIndex, setSelectedItemIndex] = useState(-1);
 
@@ -179,7 +176,7 @@ const StartTimeList: React.FC<Props> = ({
             <p>
               <small>{lang_goToNextAvailableDayText}</small>
               <br />
-              {format(nextFutureStartTimeAvailable, format_nextFutureStartTimeAvailableFormatString, { locale })}
+              {formatInTimeZone(nextFutureStartTimeAvailable, timezone, format_nextFutureStartTimeAvailableFormatString)}
             </p>
 
             {/*<Arrow direction="forward" />*/}
@@ -211,6 +208,7 @@ const StartTimeList: React.FC<Props> = ({
               <React.Fragment key={i}>
                 <EventListItem
                   locale={locale}
+                  timezone={timezone}
                   lang_selectedButtonText={lang_selectedButtonText}
                   lang_confirmButtonText={lang_confirmButtonText}
                   lang_cancelButtonText={lang_cancelButtonText}
@@ -239,7 +237,7 @@ const StartTimeList: React.FC<Props> = ({
               }
               onClick={() => onStartTimeSelect(startTimeEvent)}
             >
-              {format(startTimeEvent.startTime, format_startTimeFormatString, { locale })}
+              {formatInTimeZone(startTimeEvent.startTime, timezone, format_startTimeFormatString)}
             </StartTimeGridItemButton>
           ))}
         </GridContainer>

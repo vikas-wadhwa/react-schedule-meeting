@@ -20,7 +20,8 @@ import type {
   View,
 } from 'react-calendar/dist/esm/shared/types.js';
 
-import { Locale, format, getDay, isValid, startOfMonth } from 'date-fns';
+import { Locale, getDay, isValid, startOfMonth } from 'date-fns';
+import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 import React, { useEffect, useState } from 'react';
 import { setup, styled } from 'goober';
 
@@ -234,57 +235,63 @@ type CalendarProps = {
   onDaySelected: (day: Date) => void;
   selectedDay: Date;
   locale?: Locale;
+  timezone: string;
 };
 
-const formatDate = (date: Date, locale?: Locale) => {
-  return format(date, 'MM/dd/yyyy', { locale });
+const formatDate = (date: Date, timezone: string, locale?: Locale) => {
+  return formatInTimeZone(date, timezone, 'MM/dd/yyyy');
 };
 
-const ScheduleCalendar: React.FC<CalendarProps> = ({ availableTimeslots, onDaySelected, selectedDay, locale }) => {
+const ScheduleCalendar: React.FC<CalendarProps> = ({ availableTimeslots, onDaySelected, selectedDay, locale, timezone }) => {
   const [daysAvailable, setDaysAvailable] = useState<Array<any>>([]);
 
   useEffect(() => {
     const daysInTimeslots: string[] = [];
+
     availableTimeslots.map((slot) => {
       if (!isValid(new Date(slot.startTime))) throw new Error(`Invalid date for start time on slot ${slot.id}`);
       if (!isValid(new Date(slot.endTime))) throw new Error(`Invalid date for end time on slot ${slot.id}`);
       const startTimeDay = getDay(new Date(slot.startTime));
       const endTimeDay = getDay(new Date(slot.endTime));
+
       if (startTimeDay !== endTimeDay) {
-        daysInTimeslots.push(formatDate(new Date(slot.endTime), locale));
+        daysInTimeslots.push(formatDate(new Date(slot.endTime), timezone));
       }
-      daysInTimeslots.push(formatDate(new Date(slot.startTime), locale));
+
+      daysInTimeslots.push(formatDate(new Date(slot.startTime), timezone));
       return null;
     });
 
     setDaysAvailable([...new Set(daysInTimeslots)]);
-  }, [availableTimeslots]);
+  }, [availableTimeslots, timezone]);
 
   const _onClickDay = (day: Date) => {
     onDaySelected(day);
   };
 
   const _isTileDisabled = (props: TileArgs) => {
-    return props.view === 'month' && !daysAvailable.some((date) => date === formatDate(props.date, locale));
+    return props.view === 'month' && !daysAvailable.some((date) => date === formatDate(props.date, timezone));
   };
 
   const _renderClassName = (props: TileArgs) => {
-    if (daysAvailable.some((date) => date === formatDate(props.date, locale))) return ['day-tile', 'active-day-tile'];
+    if (daysAvailable.some((date) => date === formatDate(props.date, timezone))) return ['day-tile', 'active-day-tile'];
     return (props.view === 'month' && 'day-tile') || null;
   };
 
   return (
-    <StyledCalendar
-      showNeighboringMonth={false}
-      defaultView={'month'}
-      onClickDay={_onClickDay}
-      showNavigation={false}
-      tileDisabled={_isTileDisabled}
-      tileClassName={_renderClassName}
-      value={selectedDay}
-      activeStartDate={startOfMonth(selectedDay)}
-      calendarType={'gregory'}
-    />
+    <>
+      <StyledCalendar
+        showNeighboringMonth={false}
+        defaultView={'month'}
+        onClickDay={_onClickDay}
+        showNavigation={false}
+        tileDisabled={_isTileDisabled}
+        tileClassName={_renderClassName}
+        value={selectedDay}
+        activeStartDate={startOfMonth(selectedDay)}
+        calendarType={'gregory'}
+      />
+    </>
   );
 };
 
