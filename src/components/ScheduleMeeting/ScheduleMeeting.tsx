@@ -37,7 +37,7 @@ const Container = styled('div')<StyleVariables>`
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
 
   --text-color-rgb: ${({ $textColorRGB }) => $textColorRGB};
   --primary-color-text-shade-rgb: ${({ $calendarColoredTextRGB }) => $calendarColoredTextRGB};
@@ -49,6 +49,7 @@ const Container = styled('div')<StyleVariables>`
 `;
 
 const Inner = styled('div')`
+  width: 100%;
   position: relative;
   display: flex;
   flex-direction: column;
