@@ -279,19 +279,17 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ availableTimeslots, onDaySe
   };
 
   return (
-    <>
-      <StyledCalendar
-        showNeighboringMonth={false}
-        defaultView={'month'}
-        onClickDay={_onClickDay}
-        showNavigation={false}
-        tileDisabled={_isTileDisabled}
-        tileClassName={_renderClassName}
-        value={selectedDay}
-        activeStartDate={startOfMonth(selectedDay)}
-        calendarType={'gregory'}
-      />
-    </>
+    <StyledCalendar
+      showNeighboringMonth={false}
+      defaultView={'month'}
+      onClickDay={_onClickDay}
+      showNavigation={false}
+      tileDisabled={_isTileDisabled}
+      tileClassName={_renderClassName}
+      value={selectedDay}
+      activeStartDate={startOfMonth(selectedDay)}
+      calendarType={'gregory'}
+    />
   );
 };
 

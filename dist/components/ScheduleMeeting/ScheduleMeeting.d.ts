@@ -26,6 +26,7 @@ export type ModifiedTimeslot = AvailableTimeslot & {
     oldId: string | number | undefined;
 };
 export type StartTimeEvent = {
+    timezone: String;
     availableTimeslot: AvailableTimeslot;
     startTime: Date;
 };

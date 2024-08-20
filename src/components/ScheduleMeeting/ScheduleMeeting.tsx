@@ -61,7 +61,7 @@ const Inner = styled('div')`
 const Divider = styled('div')`
   width: 1px;
   background: rgba(0, 0, 0);
-  margin: 1.75rem;
+  margin: 0 1.75rem;
   @media (max-width: 768px) {
     width: auto;
     height: 1px;
@@ -241,6 +241,7 @@ export type ModifiedTimeslot = AvailableTimeslot & {
 };
 
 export type StartTimeEvent = {
+  timezone: String;
   availableTimeslot: AvailableTimeslot;
   startTime: Date;
 };
@@ -405,6 +406,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
     const splitTimeslots = splitTimeslot(startTimeEvent);
     const startTimeEventEmitObject: StartTimeEventEmit = {
       ...startTimeEvent,
+      timezone: timezone,
       splitTimeslot: splitTimeslots,
       resetDate: () => setSelectedDay(defaultDate || new Date()),
       resetSelectedTimeState: () => setSelectedStartTime(undefined),
@@ -438,6 +440,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
 
       while (startTimesPossible >= 0) {
         const newStartTimeEvent: StartTimeEvent = {
+          timezone: timezone,
           availableTimeslot,
           startTime: addMinutes(
             new Date(availableTimeslot.startTime),

@@ -1,6 +1,6 @@
 export type TimeSlot = {
-    startTime: Date | string;
-    endTime: Date | string;
+    startTime: Date | string | number;
+    endTime: Date | string | number;
     [key: string]: any;
 };
 /**
