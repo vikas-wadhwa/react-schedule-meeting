@@ -1,16 +1,17 @@
 import { Locale } from 'date-fns';
 import React from 'react';
+export type PrefixSection = {
+    id?: string | number | undefined;
+    className?: string;
+};
+export type SuffixSection = {
+    id?: string | number | undefined;
+    className?: string;
+};
 export type AvailableTimeslot = {
-    displayText: string;
     startTime: Date | string;
     endTime: Date | string;
     id?: string | number | undefined;
-};
-export type Host = {
-    user_id?: string | number | undefined;
-    email: string;
-    avatar_url: string;
-    full_name: string;
 };
 export type Scheduler = {
     id: string | number | undefined;
@@ -18,13 +19,14 @@ export type Scheduler = {
     description: string;
     duration: string;
     timezone: string;
+    clock_notation: number;
 };
 export type SplitTimeslot = null | ModifiedTimeslot;
 export type ModifiedTimeslot = AvailableTimeslot & {
     oldId: string | number | undefined;
 };
 export type StartTimeEvent = {
-    displayText: string;
+    timezone: String;
     availableTimeslot: AvailableTimeslot;
     startTime: Date;
 };
@@ -34,7 +36,8 @@ export type StartTimeEventEmit = StartTimeEvent & {
     resetSelectedTimeState: () => void;
 };
 type Props = {
-    host: Host;
+    prefixSection: PrefixSection;
+    suffixSection: SuffixSection;
     scheduler: Scheduler;
     availableTimeslots: AvailableTimeslot[];
     backgroundColor?: string;
@@ -57,6 +60,7 @@ type Props = {
     lang_noFutureTimesText?: string;
     lang_selectedButtonText?: string;
     locale?: Locale;
+    onTimeZoneChange?: (timezone: string) => void;
     onNoFutureTimesAvailable?: (selectedDate: Date) => void;
     onSelectedDayChange?: (day: Date) => void;
     onStartTimeSelect?: (startTimeEventEmit: StartTimeEventEmit) => void;

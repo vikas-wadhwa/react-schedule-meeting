@@ -17,13 +17,13 @@ export default [
         typescript: require('typescript'),
       }),
       cleanup({extensions: ['ts', 'tsx']}),
-      terser(),
+      // terser(),
       visualizer(),
     ],
     output: [
       { file: pkg.module, format: 'esm' },
       {
-        file: 'docs/src/reactComponentLib/index.js',
+        file: 'dist/index.esm.js',
         format: 'es',
         banner: '/* eslint-disable */',
       },

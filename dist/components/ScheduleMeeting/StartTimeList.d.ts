@@ -1,0 +1,28 @@
+import React from 'react';
+import { StartTimeEvent } from './ScheduleMeeting';
+import { Locale } from 'date-fns';
+type Props = {
+    skipConfirmCheck: boolean;
+    selectedDay: Date;
+    setSelectedStartTime: (value: number | undefined) => void;
+    selectedStartTime?: number;
+    startTimeListItems?: StartTimeEvent[];
+    onStartTimeSelect: (startTimeEvent: StartTimeEvent) => void;
+    emptyListContentEl?: React.ElementType;
+    format_startTimeFormatString: string;
+    lang_emptyListText: string;
+    lang_confirmButtonText: string;
+    lang_cancelButtonText: string;
+    lang_goToNextAvailableDayText: string;
+    lang_noFutureTimesText: string;
+    lang_selectedButtonText: string;
+    onGoToNextAvailableDayClick: () => void;
+    nextFutureStartTimeAvailable: undefined | Date;
+    format_nextFutureStartTimeAvailableFormatString: string;
+    startTimeListStyle?: 'scroll-list' | 'grid';
+    locale?: Locale;
+    timezone: string;
+    eventDurationInMinutes: number;
+};
+declare const StartTimeList: React.FC<Props>;
+export default StartTimeList;

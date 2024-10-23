@@ -1,7 +1,8 @@
 import React from 'react';
 import { StartTimeEvent } from './ScheduleMeeting';
-import { ThemedButton } from '../ThemedButton';
-import { format } from 'date-fns';
+import { StartTimeListButton, StartTimeGridItemButton, StartTimeConfirmButton } from '../Buttons';
+import { Locale, getDay, isValid, startOfMonth } from 'date-fns';
+import { format, formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { styled } from 'goober';
 
 type Props = {
@@ -15,6 +16,7 @@ type Props = {
   lang_cancelButtonText: string;
   lang_selectedButtonText: string;
   locale?: Locale;
+  timezone: string;
 };
 
 const Container = styled('div')`
@@ -23,7 +25,7 @@ const Container = styled('div')`
   align-items: center;
 `;
 
-const CancelButton = styled('button')`
+const ConfirmButton = styled('button')`
   padding: 8px 24px;
   border: none;
   background-color: rgb(0, 0, 0, 0);
@@ -53,23 +55,26 @@ const StartTimeListItem: React.FC<Props> = ({
   lang_cancelButtonText,
   lang_selectedButtonText,
   locale,
+  timezone,
 }) => {
+
+  let chosen = Boolean(selected || confirmState);
+
   return (
     <Container className="rsm-start-time-item">
-      <ThemedButton
+      <StartTimeListButton
         type="button"
-        className="rsm-confirm-button"
-        selected={Boolean(selected || confirmState)}
-        onClick={onStartTimeSelect}
+        className="rsm-cancel-button"
+        selected={chosen}
+        onClick={chosen ? onCancelClicked : onStartTimeSelect}
       >
-        {confirmState && !selected && `${lang_confirmButtonText} `}
-        {selected && `${lang_selectedButtonText} `}
-        {format(startTimeEvent.startTime, format_startTimeFormatString, { locale })}
-      </ThemedButton>
+        {formatInTimeZone(startTimeEvent.startTime, timezone, format_startTimeFormatString)}
+      </StartTimeListButton>
+
       {(confirmState || selected) && (
-        <CancelButton type="button" className="rsm-cancel-button" onClick={onCancelClicked}>
-          {lang_cancelButtonText}
-        </CancelButton>
+        <StartTimeConfirmButton type="button" className="rsm-confirm-button" onClick={onStartTimeSelect}>
+          {lang_confirmButtonText}
+        </StartTimeConfirmButton>
       )}
     </Container>
   );
