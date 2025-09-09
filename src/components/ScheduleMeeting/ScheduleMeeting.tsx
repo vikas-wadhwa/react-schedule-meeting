@@ -9,6 +9,8 @@ import {
   isPast,
   isSameMinute,
   isToday,
+  isValid,
+  parseISO,
   subDays,
   subMonths
 } from 'date-fns';
@@ -22,6 +24,8 @@ import Color from 'color';
 import ScheduleCalendar from './ScheduleCalendar';
 import StartTimeList from './StartTimeList';
 import { styled } from 'goober';
+import Select from 'react-select';
+import TimeZonePicker from './TimeZonePicker';
 
 type StyleVariables = {
   $borderRadius: number;
@@ -33,7 +37,7 @@ type StyleVariables = {
   $calendarColoredTextRGB: string;
 };
 
-const Container = styled('div')<StyleVariables>`
+const Container = styled('div') <StyleVariables>`
   width: 100%;
   display: flex;
   align-items: center;
@@ -111,40 +115,6 @@ const StartTimeListContainerAbsolute = styled('div')`
   display: flex;
   flex-direction: column;
 `;
-
-// const PrefixListContainer = styled('div')`
-//   flex: 1;
-//   overflow: hidden;
-//   position: relative;
-//   @media (max-width: 768px) {
-//     min-height: 301px;
-//   }
-// `;
-
-// const PrefixListContainerAbsolute = styled('div')`
-//   position: absolute;
-//   width: 100%;
-//   height: 100%;
-//   display: flex;
-//   flex-direction: column;
-// `;
-
-// const SuffixListContainer = styled('div')`
-//   flex: 1;
-//   overflow: hidden;
-//   position: relative;
-//   @media (max-width: 768px) {
-//     min-height: 301px;
-//   }
-// `;
-
-// const SuffixListContainerAbsolute = styled('div')`
-//   position: absolute;
-//   width: 100%;
-//   height: 100%;
-//   display: flex;
-//   flex-direction: column;
-// `;
 
 const SelectedDayTitle = styled('h3')`
   width: 100%;
@@ -288,7 +258,12 @@ type Props = {
   skipConfirmCheck?: boolean;
   startTimeListStyle?: 'scroll-list' | 'grid';
   textColor?: string;
+  eventList?: { id: number, title: string, start: string, end: string, speaker_event_user_id: number, status: string, url: string }[];
+  tzLabels: Record<string, string>;
+  EventListWidget?: React.ComponentType<{ events: Props['eventList'], selectedDate: Date, timezone: string }>;
 };
+
+
 
 export const ScheduleMeeting: React.FC<Props> = ({
   prefixSection,
@@ -326,6 +301,9 @@ export const ScheduleMeeting: React.FC<Props> = ({
   skipConfirmCheck = false,
   startTimeListStyle = 'grid',
   textColor,
+  eventList = [],
+  EventListWidget,
+  tzLabels
 }) => {
   const primaryColorRGB = Color(primaryColor).rgb().array().join(',');
   const backgroundColorRGB = Color(backgroundColor).rgb().array().join(',');
@@ -346,10 +324,40 @@ export const ScheduleMeeting: React.FC<Props> = ({
   const [startTimeEventsList, setStartTimeEventsList] = useState([] as StartTimeEvent[]);
   const [selectedDayStartTimeEventsList, setSelectedDayStartTimeEventsList] = useState([] as StartTimeEvent[]);
   const [nextFutureStartTimeAvailable, setNextFutureStartTimeAvailable] = useState<undefined | Date>();
-
   const [orderedAvailableTimeslots, setOrderedAvailableTimeslots] = useState<AvailableTimeslot[]>([]);
+  const [timeslotsLoading, setTimeslotsLoading] = useState(false);
 
-  const _timezoneIds: string [] = Intl.supportedValuesOf('timeZone');
+
+  const buildStartTimeEvents = (tz: string) => {
+    const startTimeEvents: StartTimeEvent[] = [];
+
+    for (const availableTimeslot of orderedAvailableTimeslots) {
+      const timeslotDuration = differenceInMinutes(
+        new Date(availableTimeslot.endTime),
+        new Date(availableTimeslot.startTime),
+      );
+
+      let startTimesPossible = Math.floor(timeslotDuration / (eventDurationInMinutes + eventStartTimeSpreadInMinutes)) - 1;
+
+      while (startTimesPossible >= 0) {
+        startTimeEvents.push({
+          timezone: tz,
+          availableTimeslot,
+          startTime: addMinutes(
+            new Date(availableTimeslot.startTime),
+            startTimesPossible * (eventDurationInMinutes + eventStartTimeSpreadInMinutes),
+          ),
+        });
+        startTimesPossible--;
+      }
+    }
+
+    return startTimeEvents.sort(
+      (a: StartTimeEvent, b: StartTimeEvent) => a.startTime.getTime() - b.startTime.getTime(),
+    );
+  }
+
+  const _timezoneIds: string[] = Intl.supportedValuesOf('timeZone');
 
   useEffect(() => {
     setSelectedStartTime(_selectedStartTime ? _selectedStartTime.getTime() : undefined);
@@ -363,10 +371,34 @@ export const ScheduleMeeting: React.FC<Props> = ({
     setOrderedAvailableTimeslots(_orderedAvailableTimeslots);
   }, [availableTimeslots]);
 
-  const onChangeTimezone = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setTimezone(e.target.value);
-    onTimeZoneChange && onTimeZoneChange(e.target.value);
-  }
+  useEffect(() => {
+    const orderedStartTimeEvents = buildStartTimeEvents(timezone);
+
+    // set initial display date (also update when timezone changes)
+    if (defaultDate) {
+      setSelectedDay(fromZonedTime(defaultDate, timezone));
+    }
+
+    setStartTimeEventsList(orderedStartTimeEvents);
+  }, [orderedAvailableTimeslots, eventDurationInMinutes, eventStartTimeSpreadInMinutes, defaultDate, timezone]);
+
+  const handleTimezoneChange = (iana: string | null) => {
+    if (!iana) return;
+
+    // const newStartTimes = buildStartTimeEvents(iana);
+
+    // setStartTimeEventsList(newStartTimes);
+    setTimeslotsLoading(true);
+    setTimezone(iana);
+
+    if (defaultDate) {
+      setSelectedDay(fromZonedTime(defaultDate, iana));
+    }
+
+    onTimeZoneChange?.(iana);
+  };
+
+  const timezoneOptions = _timezoneIds.map((tz) => ({ value: tz, label: tz }));
 
   const onDaySelected = (day: Date) => {
     setSelectedDay(day);
@@ -430,46 +462,22 @@ export const ScheduleMeeting: React.FC<Props> = ({
     return formatInTimeZone(a, timezone, 'yyyy-MM') == formatInTimeZone(b, timezone, 'yyyy-MM')
   }
 
-  useEffect(() => {
-    // compile a list of all possible event start times given all timeslots
-    const startTimeEvents = [];
+  const hasEventsOnDay = (day: Date, events: typeof eventList, tz: string) => {
+    return events.some((ev) => {
+      if (!ev || !ev.start) return false;
 
-    // iterate through all available timeslots
-    for (const availableTimeslot of orderedAvailableTimeslots) {
-      const timeslotDuration = differenceInMinutes(
-        new Date(availableTimeslot.endTime),
-        new Date(availableTimeslot.startTime),
-      );
+      const parsedEventStart = parseISO(ev.start);
 
-      // this prevents start times from being created where the event duration runs past the available timeslot
-      let startTimesPossible =
-        Math.floor(timeslotDuration / (eventDurationInMinutes + eventStartTimeSpreadInMinutes)) - 1;
+      if (!isValid(parsedEventStart)) return false;
 
-      while (startTimesPossible >= 0) {
-        const newStartTimeEvent: StartTimeEvent = {
-          timezone: timezone,
-          availableTimeslot,
-          startTime: addMinutes(
-            new Date(availableTimeslot.startTime),
-            startTimesPossible * (eventDurationInMinutes + eventStartTimeSpreadInMinutes),
-          ),
-        };
-        startTimeEvents.push(newStartTimeEvent);
-        startTimesPossible--;
-      }
-    }
+      const eventDate = formatInTimeZone(parsedEventStart, tz, 'yyyy-MM-dd');
+      const selectedDate = formatInTimeZone(day, tz, 'yyyy-MM-dd');
 
-    // set initial display date
-    if (defaultDate) {
-      setSelectedDay(fromZonedTime(defaultDate, timezone));
-    }
+      return eventDate === selectedDate;
+    })
+  }
 
-    const orderedStartTimeEvents = startTimeEvents.sort(
-      (a: StartTimeEvent, b: StartTimeEvent) => a.startTime.getTime() - b.startTime.getTime(),
-    );
-
-    setStartTimeEventsList(orderedStartTimeEvents);
-  }, [orderedAvailableTimeslots, eventDurationInMinutes, eventStartTimeSpreadInMinutes, defaultDate]);
+  const selectedDayHasEvents = hasEventsOnDay(selectedDay, eventList, timezone);
 
   useEffect(() => {
     const startTimeEventsToDisplay: StartTimeEvent[] = [];
@@ -497,7 +505,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
     );
 
     const _nextFutureStartTimeAvailable = startTimeEventsList.find(
-      (startTime) => isAfter(startTime.startTime, selectedDay) ,
+      (startTime) => isAfter(startTime.startTime, selectedDay),
     )?.startTime;
 
     if (
@@ -513,6 +521,24 @@ export const ScheduleMeeting: React.FC<Props> = ({
     setSelectedDayStartTimeEventsList(orderedEvents);
   }, [selectedDay, startTimeEventsList]);
 
+  useEffect(() => {
+    if (!timeslotsLoading) return;
+
+    // wait two animation frames to ensure browser painted the updated timeslot DOM
+    let raf1 = 0;
+    let raf2 = 0;
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setTimeslotsLoading(false);
+      });
+    });
+
+    return () => {
+      if (raf1) cancelAnimationFrame(raf1);
+      if (raf2) cancelAnimationFrame(raf2);
+    };
+  }, [startTimeEventsList, timeslotsLoading]);
+
 
   const updateCalendar = (activeStartDate: Date) => {
     const timezonedActiveStartDate = fromZonedTime(activeStartDate, timezone);
@@ -520,7 +546,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
     const sameMonth = isSameMonth(timezonedSelectedDay, timezonedActiveStartDate);
     setSelectedDay(timezonedActiveStartDate);
 
-    if (sameMonth) {return null}
+    if (sameMonth) { return null }
     return onActiveStartDateChange && onActiveStartDateChange(timezonedActiveStartDate);
   };
 
@@ -548,7 +574,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
 
   const renderOverlayMessage = () => {
     if (loading) {
-      return(
+      return (
         <OverlayMessageWrapper>
           <OverlayMessage>
             <h3>Loading...</h3>
@@ -559,7 +585,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
     }
 
     else if (submitting) {
-      return(
+      return (
         <OverlayMessageWrapper>
           <OverlayMessage>
             <h3>Submitting...</h3>
@@ -577,7 +603,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
   }
 
   const Prefix = () => {
-    if (!prefixSection){return(<></>)}
+    if (!prefixSection) { return (<></>) }
 
     return (
       <>
@@ -588,7 +614,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
   }
 
   const Suffix = () => {
-    if (!suffixSection){return(<></>)}
+    if (!suffixSection) { return (<></>) }
 
     return (
       <>
@@ -598,7 +624,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
     )
   }
 
-  return(
+  return (
     <Container
       className={className}
       $primaryColorRGB={primaryColorRGB}
@@ -616,58 +642,38 @@ export const ScheduleMeeting: React.FC<Props> = ({
         <Prefix />
 
 
-        <CalendarContainer className="rs-calendar-container" style={{opacity: overlay_opacity()}} >
+        <CalendarContainer className="rs-calendar-container" style={{ opacity: overlay_opacity() }} >
 
 
-          <TimezoneContainer className="rs-timezone-container">
-            <div className='d-flex fw-bold' style={{width: '7.5rem'}}>Time Zone</div>
+          {availableTimeslots.length > 0 && <TimezoneContainer className="rs-timezone-container">
+            <div className='d-flex flex-column gap-3'>
 
-            <select
-              id='rs_timezone_picker'
-              name='timezone'
-              className='form-control d-flex'
-              style={{width: '30rem'}}
-              onChange={onChangeTimezone}
-            >
-              {_timezoneIds.map((tz) => (
-                <option value={tz} selected={tz == timezone}>
-                  {tz}
-                </option>
-              ))}
-            </select>
-          </TimezoneContainer>
-
-{/*          <ClockNotationContainer className="rs-time-format-container">
-            <ButtonGroup>
-                <ToggleButton
-                  key="rs-clock-notation-container-12"
-                  id="rs-lock-notation-container-12"
-                  type="radio"
-                  name="radio"
-                  variant={clockNotation == 12 ? 'dark' : 'outline-light'}
-                  value={12}
-                  checked={clockNotation == 12}
-                  onChange={(e) => setClockNotation(e.currentTarget.value)}
-                >
-                  AM/PM
-                </ToggleButton>
-
-                <ToggleButton
-                  key="rs-clock-notation-container-24"
-                  id="rs-lock-notation-container-24"
-                  type="radio"
-                  name="radio"
-                  variant={clockNotation == 24 ? 'dark' : 'outline-light'}
-                  value={24}
-                  checked={clockNotation == 24}
-                  onChange={(e) => setClockNotation(e.currentTarget.value)}
-                >
-                  24h
-                </ToggleButton>
+              <span className='fw-bold'>Time Zone</span>
 
 
-            </ButtonGroup>
-          </ClockNotationContainer>*/}
+              <style>{`
+                .rselect__control { min-width: 36rem; }
+                .rselect__menu    { width: 40rem; }
+                .rselect__menu-list { width: 100%; }
+
+                .rselect__option .tz-offset { color: #9ca3af; }
+                .rselect__option--is-focused .tz-offset,
+                .rselect__option--is-selected .tz-offset { color: #fff; }
+              `}</style>
+
+              <TimeZonePicker
+                value={timezone}
+                labels={tzLabels}
+                onChange={handleTimezoneChange}
+                className="sclass"
+                classNamePrefix="rselect"
+                name="timezone"
+                noOptionsMessage={() => "No timezones found"}
+                styles={{ container: (base: any) => ({ ...base, width: "40rem" }) }}
+              />
+            </div>
+
+          </TimezoneContainer>}
 
           <Header>
             <ArrowButton type="button" className="rsm-arrow-button" onClick={goToPreviousMonth}>
@@ -687,56 +693,69 @@ export const ScheduleMeeting: React.FC<Props> = ({
             startTimeEventsList={startTimeEventsList}
             onDaySelected={onDaySelected}
             timezone={timezone}
+            eventList={eventList}
           />
         </CalendarContainer>
 
         <Divider />
 
-        <StartTimeListContainer className="rs-timelist-container" style={{opacity: overlay_opacity()}}>
+        <StartTimeListContainer className="rs-timelist-container" style={{ opacity: overlay_opacity() }}>
           <StartTimeListContainerAbsolute>
+            {timeslotsLoading ? (
+              // while timeslot recompute is in progress show overlay in the timeslot pane only
+              <div className="d-flex justify-content-center align-items-center gap-3">
+                <div className="spinner-border" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <div>Loading timeslots...</div>
+              </div>
 
-            <DurationHeaderContainer>
-              <span className="fw-bold fs-1 me-1">{eventDurationInMinutes}</span>
-              <span className="fs-3">minutes</span>
-            </DurationHeaderContainer>
+            ) 
+            : selectedDayHasEvents ? (
+              // If the selected day has events, show random text instead of timeslots
+              <div className="h-100">
+                {/* <span className="fw-bold fs-4">Show events here</span> */}
+                {EventListWidget && <EventListWidget events={eventList} selectedDate={selectedDay} timezone={timezone} />}
+              </div>
+            )
+              : (
+                <>
+                  <DurationHeaderContainer>
+                    <span className="fw-bold fs-1 me-1">{eventDurationInMinutes}</span>
+                    <span className="fs-3">minutes</span>
+                  </DurationHeaderContainer>
 
-            <Header>
-{/*              <ArrowButton type="button" className="rsm-arrow-button" onClick={goToPreviousDay}>
-                <Arrow direction="back" />
-              </ArrowButton>
-*/}
-              <SelectedDayTitle className="rsm-date-title">
-                {formatInTimeZone(selectedDay, timezone, format_selectedDateDayTitleFormatString)}
-              </SelectedDayTitle>
+                  <Header>
+                    <SelectedDayTitle className="rsm-date-title">
+                      {formatInTimeZone(selectedDay, timezone, format_selectedDateDayTitleFormatString)}
+                    </SelectedDayTitle>
+                  </Header>
 
-{/*              <ArrowButton type="button" className="rsm-arrow-button" onClick={goToNextDay}>
-                <Arrow direction="forward" />
-              </ArrowButton>*/}
-            </Header>
-
-            <StartTimeList
-              skipConfirmCheck={skipConfirmCheck}
-              selectedDay={selectedDay}
-              selectedStartTime={selectedStartTime}
-              locale={locale}
-              format_nextFutureStartTimeAvailableFormatString={format_nextFutureStartTimeAvailableFormatString}
-              nextFutureStartTimeAvailable={nextFutureStartTimeAvailable}
-              lang_goToNextAvailableDayText={lang_goToNextAvailableDayText}
-              lang_noFutureTimesText={lang_noFutureTimesText}
-              onGoToNextAvailableDayClick={handleGoToNextAvailableDay}
-              lang_confirmButtonText={lang_confirmButtonText}
-              lang_cancelButtonText={lang_cancelButtonText}
-              lang_emptyListText={lang_emptyListText}
-              lang_selectedButtonText={lang_selectedButtonText}
-              emptyListContentEl={emptyListContentEl}
-              onStartTimeSelect={_onStartTimeSelect}
-              startTimeListItems={selectedDayStartTimeEventsList}
-              format_startTimeFormatString={format_startTimeFormatString}
-              startTimeListStyle={startTimeListStyle}
-              setSelectedStartTime={setSelectedStartTime}
-              timezone={timezone}
-              eventDurationInMinutes={eventDurationInMinutes}
-            />
+                  <StartTimeList
+                    skipConfirmCheck={skipConfirmCheck}
+                    selectedDay={selectedDay}
+                    selectedStartTime={selectedStartTime}
+                    locale={locale}
+                    format_nextFutureStartTimeAvailableFormatString={format_nextFutureStartTimeAvailableFormatString}
+                    nextFutureStartTimeAvailable={nextFutureStartTimeAvailable}
+                    lang_goToNextAvailableDayText={lang_goToNextAvailableDayText}
+                    lang_noFutureTimesText={lang_noFutureTimesText}
+                    onGoToNextAvailableDayClick={handleGoToNextAvailableDay}
+                    lang_confirmButtonText={lang_confirmButtonText}
+                    lang_cancelButtonText={lang_cancelButtonText}
+                    lang_emptyListText={lang_emptyListText}
+                    lang_selectedButtonText={lang_selectedButtonText}
+                    emptyListContentEl={emptyListContentEl}
+                    onStartTimeSelect={_onStartTimeSelect}
+                    startTimeListItems={selectedDayStartTimeEventsList}
+                    format_startTimeFormatString={format_startTimeFormatString}
+                    startTimeListStyle={startTimeListStyle}
+                    setSelectedStartTime={setSelectedStartTime}
+                    timezone={timezone}
+                    eventDurationInMinutes={eventDurationInMinutes}
+                  />
+                </>
+              )}
           </StartTimeListContainerAbsolute>
         </StartTimeListContainer>
 

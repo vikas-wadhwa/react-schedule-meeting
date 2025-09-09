@@ -20,7 +20,7 @@ import type {
   View,
 } from 'react-calendar/dist/esm/shared/types.js';
 
-import { Locale, getDay, isValid, startOfMonth } from 'date-fns';
+import { Locale, getDay, isValid, parseISO, startOfMonth } from 'date-fns';
 import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 
 import React, { useEffect, useState } from 'react';
@@ -107,7 +107,7 @@ const StyledCalendar = styled(Calendar)`
     color: rgba(var(--text-color-rgb), .9);
     padding: 5px;
     position: relative;
-    z-index: 1;
+    z-index: 0;
     &::after {
       content: '';
       position: absolute;
@@ -229,6 +229,36 @@ const StyledCalendar = styled(Calendar)`
       min-height: 302px;
     }
   }
+
+  .react-calendar__tile { position: relative; }
+  .rsm-event-dot {
+    width: 15px;
+    height: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(var(--primary-color-rgb), 1);
+    color: #fff;
+    font-size: 10px;
+    line-height: 1;
+    text-align: center;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.12);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  /* single-event badge: smaller dot without text */
+  .rsm-event-dot.single {
+    width: 8px;
+    height: 8px;
+    font-size: 0;
+    padding: 0;
+  }
 `;
 
 type CalendarProps = {
@@ -237,6 +267,7 @@ type CalendarProps = {
   selectedDay: Date;
   locale?: Locale;
   timezone: string;
+  eventList?: { id: number, title: string, start: string, end: string, speaker_event_user_id: number, status: string, url: string }[];
 };
 
 const formatDate = (date: Date, timezone: string, locale?: Locale) => {
@@ -249,8 +280,30 @@ const formateDateFromLocal = (date: Date, timezone: string, locale?: Locale) => 
 };
 
 
-const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDaySelected, selectedDay, locale, timezone }) => {
+const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDaySelected, selectedDay, locale, timezone, eventList = [] }) => {
   const [daysAvailable, setDaysAvailable] = useState<Array<any>>([]);
+  const [eventCounts, setEventCounts] = useState<{ [key: string]: number }>({});
+
+  useEffect(() => {
+    const counts: { [key: string]: number } = {};
+    
+    if (!eventList || eventList.length === 0) {
+      setEventCounts({});
+      return;
+    }
+
+    for (const ev of eventList) {
+      if (!ev || !ev.start) continue;
+
+      const parsed = parseISO(ev.start);
+      if (!isValid(parsed)) continue;
+
+      const key = formatInTimeZone(parsed, timezone, 'yyyy-MM-dd');
+      counts[key] = (counts[key] || 0) + 1;
+    }
+
+    setEventCounts(counts);
+  }, [eventList, timezone]);
 
   useEffect(() => {
     const daysInTimeslots: string[] = [];
@@ -274,7 +327,12 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
   };
 
   const _isTileDisabled = (props: TileArgs) => {
-    return props.view === 'month' && !daysAvailable.some((date) => date === formateDateFromLocal(props.date, timezone));
+    if (props.view !== 'month') return false;
+    const dateStr = formateDateFromLocal(props.date, timezone);
+    const hasAvailable = daysAvailable.some((date) => date === dateStr);
+    const key = formatInTimeZone(props.date, timezone, 'yyyy-MM-dd');
+    const hasEvent = (eventCounts[key] || 0) > 0;
+    return !hasAvailable && !hasEvent;
   };
 
   const _renderClassName = (props: TileArgs) => {
@@ -293,6 +351,14 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
       value={selectedDay}
       activeStartDate={startOfMonth(selectedDay)}
       calendarType={'gregory'}
+      tileContent={({date, view}) => {
+        if (view !== 'month') return null;
+        const key = formatInTimeZone(date, timezone, 'yyyy-MM-dd');
+        const count = eventCounts[key] || 0;
+        if (count === 0) return null;
+        const classes = `rsm-event-dot${count === 1 ? ' single' : ''}`;
+        return React.createElement("div", { className: classes, "aria-label": count === 1 ? '1 event' : `${count} events` }, count > 1 ? count : '');
+      }}
     />
   );
 };
