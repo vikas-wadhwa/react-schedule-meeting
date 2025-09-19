@@ -323,7 +323,15 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
   }, [startTimeEventsList, timezone]);
 
   const _onClickDay = (day: Date) => {
-    onDaySelected(fromZonedTime(day, timezone));
+    
+    const year = day.getFullYear();
+    const month = day.getMonth();
+    const date = day.getDate();
+
+    const localDate = new Date(year, month, date);
+    const timezoneAdjustedDay = fromZonedTime(localDate.toISOString().split('T')[0] + 'T00:00:00', timezone);
+
+    onDaySelected(timezoneAdjustedDay);
   };
 
   const _isTileDisabled = (props: TileArgs) => {

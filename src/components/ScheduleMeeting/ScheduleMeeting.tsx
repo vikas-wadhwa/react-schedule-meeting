@@ -385,14 +385,23 @@ export const ScheduleMeeting: React.FC<Props> = ({
   const handleTimezoneChange = (iana: string | null) => {
     if (!iana) return;
 
-    // const newStartTimes = buildStartTimeEvents(iana);
+    const year = selectedDay.getFullYear();
+    const month = selectedDay.getMonth();
+    const date = selectedDay.getDate();
 
-    // setStartTimeEventsList(newStartTimes);
+    const localDate = new Date(year, month, date);
+    const newSelectedDay = fromZonedTime(localDate.toISOString().split('T')[0] + 'T00:00:00', iana);
+
     setTimeslotsLoading(true);
     setTimezone(iana);
+    setSelectedDay(newSelectedDay);
 
     if (defaultDate) {
-      setSelectedDay(fromZonedTime(defaultDate, iana));
+      const defaultYear = defaultDate.getFullYear();
+      const defaultMonth = defaultDate.getMonth();
+      const defaultDateNum = defaultDate.getDate();
+      const defaultLocalDate = new Date(defaultYear, defaultMonth, defaultDateNum);
+      setSelectedDay(fromZonedTime(defaultLocalDate.toISOString().split('T')[0] + 'T00:00:00', iana));
     }
 
     onTimeZoneChange?.(iana);
