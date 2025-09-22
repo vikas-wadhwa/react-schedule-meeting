@@ -28,6 +28,7 @@ import { setup, styled } from 'goober';
 
 import { StartTimeEvent } from './ScheduleMeeting';
 import { shouldForwardProp } from 'goober/should-forward-prop';
+import { createZonedDate } from '../../utils/dateUtils';
 
 setup(React.createElement,undefined, undefined, shouldForwardProp((prop) => {
   // Do NOT forward props that start with `$` symbol
@@ -323,13 +324,15 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
   }, [startTimeEventsList, timezone]);
 
   const _onClickDay = (day: Date) => {
-    
-    const year = day.getFullYear();
-    const month = day.getMonth();
-    const date = day.getDate();
 
-    const localDate = new Date(year, month, date);
-    const timezoneAdjustedDay = fromZonedTime(localDate.toISOString().split('T')[0] + 'T00:00:00', timezone);
+    // debugger;
+    
+    // const year = day.getFullYear();
+    // const month = day.getMonth();
+    // const date = day.getDate();
+
+    // const localDate = new Date(year, month, date);
+    const timezoneAdjustedDay = createZonedDate(day, timezone);
 
     onDaySelected(timezoneAdjustedDay);
   };

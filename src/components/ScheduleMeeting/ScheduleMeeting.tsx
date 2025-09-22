@@ -26,6 +26,7 @@ import StartTimeList from './StartTimeList';
 import { styled } from 'goober';
 import Select from 'react-select';
 import TimeZonePicker from './TimeZonePicker';
+import { createZonedDate } from '../../utils/dateUtils';
 
 type StyleVariables = {
   $borderRadius: number;
@@ -385,23 +386,23 @@ export const ScheduleMeeting: React.FC<Props> = ({
   const handleTimezoneChange = (iana: string | null) => {
     if (!iana) return;
 
-    const year = selectedDay.getFullYear();
-    const month = selectedDay.getMonth();
-    const date = selectedDay.getDate();
+    // const year = selectedDay.getFullYear();
+    // const month = selectedDay.getMonth();
+    // const date = selectedDay.getDate();
 
-    const localDate = new Date(year, month, date);
-    const newSelectedDay = fromZonedTime(localDate.toISOString().split('T')[0] + 'T00:00:00', iana);
+    // const localDate = new Date(year, month, date);
+    const newSelectedDay = createZonedDate(selectedDay, iana);
 
     setTimeslotsLoading(true);
     setTimezone(iana);
     setSelectedDay(newSelectedDay);
 
     if (defaultDate) {
-      const defaultYear = defaultDate.getFullYear();
-      const defaultMonth = defaultDate.getMonth();
-      const defaultDateNum = defaultDate.getDate();
-      const defaultLocalDate = new Date(defaultYear, defaultMonth, defaultDateNum);
-      setSelectedDay(fromZonedTime(defaultLocalDate.toISOString().split('T')[0] + 'T00:00:00', iana));
+      // const defaultYear = defaultDate.getFullYear();
+      // const defaultMonth = defaultDate.getMonth();
+      // const defaultDateNum = defaultDate.getDate();
+      // const defaultLocalDate = new Date(defaultYear, defaultMonth, defaultDateNum);
+      setSelectedDay(createZonedDate(defaultDate, iana));
     }
 
     onTimeZoneChange?.(iana);
