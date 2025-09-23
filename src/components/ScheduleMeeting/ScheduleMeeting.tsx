@@ -259,9 +259,7 @@ type Props = {
   skipConfirmCheck?: boolean;
   startTimeListStyle?: 'scroll-list' | 'grid';
   textColor?: string;
-  eventList?: { id: number, title: string, start: string, end: string, speaker_event_user_id: number, status: string, url: string }[];
   tzLabels: Record<string, string>;
-  EventListWidget?: React.ComponentType<{ events: Props['eventList'], selectedDate: Date, timezone: string }>;
 };
 
 
@@ -302,8 +300,6 @@ export const ScheduleMeeting: React.FC<Props> = ({
   skipConfirmCheck = false,
   startTimeListStyle = 'grid',
   textColor,
-  eventList = [],
-  EventListWidget,
   tzLabels
 }) => {
   const primaryColorRGB = Color(primaryColor).rgb().array().join(',');
@@ -471,23 +467,6 @@ export const ScheduleMeeting: React.FC<Props> = ({
   const isSameMonth = (a: Date, b: Date) => {
     return formatInTimeZone(a, timezone, 'yyyy-MM') == formatInTimeZone(b, timezone, 'yyyy-MM')
   }
-
-  const hasEventsOnDay = (day: Date, events: typeof eventList, tz: string) => {
-    return events.some((ev) => {
-      if (!ev || !ev.start) return false;
-
-      const parsedEventStart = parseISO(ev.start);
-
-      if (!isValid(parsedEventStart)) return false;
-
-      const eventDate = formatInTimeZone(parsedEventStart, tz, 'yyyy-MM-dd');
-      const selectedDate = formatInTimeZone(day, tz, 'yyyy-MM-dd');
-
-      return eventDate === selectedDate;
-    })
-  }
-
-  const selectedDayHasEvents = hasEventsOnDay(selectedDay, eventList, timezone);
 
   useEffect(() => {
     const startTimeEventsToDisplay: StartTimeEvent[] = [];
@@ -703,7 +682,6 @@ export const ScheduleMeeting: React.FC<Props> = ({
             startTimeEventsList={startTimeEventsList}
             onDaySelected={onDaySelected}
             timezone={timezone}
-            eventList={eventList}
           />
         </CalendarContainer>
 
@@ -720,15 +698,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
                 <div>Loading timeslots...</div>
               </div>
 
-            ) 
-            : selectedDayHasEvents ? (
-              // If the selected day has events, show random text instead of timeslots
-              <div className="h-100">
-                {/* <span className="fw-bold fs-4">Show events here</span> */}
-                {EventListWidget && <EventListWidget events={eventList} selectedDate={selectedDay} timezone={timezone} />}
-              </div>
-            )
-              : (
+            ) : (
                 <>
                   <DurationHeaderContainer>
                     <span className="fw-bold fs-1 me-1">{eventDurationInMinutes}</span>

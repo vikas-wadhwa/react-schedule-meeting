@@ -268,7 +268,6 @@ type CalendarProps = {
   selectedDay: Date;
   locale?: Locale;
   timezone: string;
-  eventList?: { id: number, title: string, start: string, end: string, speaker_event_user_id: number, status: string, url: string }[];
 };
 
 const formatDate = (date: Date, timezone: string, locale?: Locale) => {
@@ -281,30 +280,8 @@ const formateDateFromLocal = (date: Date, timezone: string, locale?: Locale) => 
 };
 
 
-const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDaySelected, selectedDay, locale, timezone, eventList = [] }) => {
+const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDaySelected, selectedDay, locale, timezone }) => {
   const [daysAvailable, setDaysAvailable] = useState<Array<any>>([]);
-  const [eventCounts, setEventCounts] = useState<{ [key: string]: number }>({});
-
-  useEffect(() => {
-    const counts: { [key: string]: number } = {};
-    
-    if (!eventList || eventList.length === 0) {
-      setEventCounts({});
-      return;
-    }
-
-    for (const ev of eventList) {
-      if (!ev || !ev.start) continue;
-
-      const parsed = parseISO(ev.start);
-      if (!isValid(parsed)) continue;
-
-      const key = formatInTimeZone(parsed, timezone, 'yyyy-MM-dd');
-      counts[key] = (counts[key] || 0) + 1;
-    }
-
-    setEventCounts(counts);
-  }, [eventList, timezone]);
 
   useEffect(() => {
     const daysInTimeslots: string[] = [];
@@ -342,8 +319,7 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
     const dateStr = formateDateFromLocal(props.date, timezone);
     const hasAvailable = daysAvailable.some((date) => date === dateStr);
     const key = formatInTimeZone(props.date, timezone, 'yyyy-MM-dd');
-    const hasEvent = (eventCounts[key] || 0) > 0;
-    return !hasAvailable && !hasEvent;
+    return !hasAvailable;
   };
 
   const _renderClassName = (props: TileArgs) => {
@@ -362,14 +338,6 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
       value={selectedDay}
       activeStartDate={startOfMonth(selectedDay)}
       calendarType={'gregory'}
-      tileContent={({date, view}) => {
-        if (view !== 'month') return null;
-        const key = formatInTimeZone(date, timezone, 'yyyy-MM-dd');
-        const count = eventCounts[key] || 0;
-        if (count === 0) return null;
-        const classes = `rsm-event-dot${count === 1 ? ' single' : ''}`;
-        return React.createElement("div", { className: classes, "aria-label": count === 1 ? '1 event' : `${count} events` }, count > 1 ? count : '');
-      }}
     />
   );
 };
