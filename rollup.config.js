@@ -23,7 +23,7 @@ export default [
     output: [
       { file: pkg.module, format: 'esm' },
       {
-        file: 'dist/index.esm.js',
+        file: 'dist/react-schedule-meeting.js',
         format: 'es',
         banner: '/* eslint-disable */',
       },
