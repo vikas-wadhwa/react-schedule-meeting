@@ -4,6 +4,7 @@ import { StartTimeListButton, StartTimeGridItemButton, StartTimeConfirmButton } 
 import { Locale, getDay, isValid, startOfMonth } from 'date-fns';
 import { format, formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { styled } from 'goober';
+import { getTimezoneAbbreviation } from '../../utils/dateUtils';
 
 type Props = {
   onStartTimeSelect: () => void;
@@ -68,7 +69,7 @@ const StartTimeListItem: React.FC<Props> = ({
         selected={chosen}
         onClick={chosen ? onCancelClicked : onStartTimeSelect}
       >
-        {formatInTimeZone(startTimeEvent.startTime, timezone, format_startTimeFormatString)}
+        {`${new Date(startTimeEvent.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: timezone, timeZoneName: 'short' })} `}
       </StartTimeListButton>
 
       {(confirmState || selected) && (

@@ -26,7 +26,6 @@ import StartTimeList from './StartTimeList';
 import { styled } from 'goober';
 import Select from 'react-select';
 import TimeZonePicker from './TimeZonePicker';
-import { createZonedDate } from '../../utils/dateUtils';
 
 type StyleVariables = {
   $borderRadius: number;
@@ -191,8 +190,8 @@ export type SuffixSection = {
 };
 
 export type AvailableTimeslot = {
-  startTime: Date | string;
-  endTime: Date | string;
+  startTime: Date | string | number;
+  endTime: Date | string | number;
   id?: string | number | undefined;
 };
 
@@ -373,7 +372,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
 
     // set initial display date (also update when timezone changes)
     if (defaultDate) {
-      setSelectedDay(fromZonedTime(defaultDate, timezone));
+      setSelectedDay(toZonedTime(defaultDate, timezone));
     }
 
     setStartTimeEventsList(orderedStartTimeEvents);
@@ -382,23 +381,22 @@ export const ScheduleMeeting: React.FC<Props> = ({
   const handleTimezoneChange = (iana: string | null) => {
     if (!iana) return;
 
-    // const year = selectedDay.getFullYear();
-    // const month = selectedDay.getMonth();
-    // const date = selectedDay.getDate();
+    const year = selectedDay.getFullYear();
+    const month = selectedDay.getMonth();
+    const date = selectedDay.getDate();
 
-    // const localDate = new Date(year, month, date);
-    const newSelectedDay = createZonedDate(selectedDay, iana);
+    const newSelectedDate = fromZonedTime(new Date(Date.UTC(year, month, date)), iana);
 
     setTimeslotsLoading(true);
     setTimezone(iana);
-    setSelectedDay(newSelectedDay);
+    setSelectedDay(newSelectedDate);
 
     if (defaultDate) {
-      // const defaultYear = defaultDate.getFullYear();
-      // const defaultMonth = defaultDate.getMonth();
-      // const defaultDateNum = defaultDate.getDate();
-      // const defaultLocalDate = new Date(defaultYear, defaultMonth, defaultDateNum);
-      setSelectedDay(createZonedDate(defaultDate, iana));
+      const defaultYear = defaultDate.getFullYear();
+      const defaultMonth = defaultDate.getMonth();
+      const defaultDateNum = defaultDate.getDate();
+      const defaultNewSelectedDate = fromZonedTime(new Date(Date.UTC(defaultYear, defaultMonth, defaultDateNum)), iana);
+      setSelectedDay(defaultNewSelectedDate);
     }
 
     onTimeZoneChange?.(iana);
@@ -449,7 +447,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
       ...startTimeEvent,
       timezone: timezone,
       splitTimeslot: splitTimeslots,
-      resetDate: () => setSelectedDay(defaultDate ? fromZonedTime(defaultDate, timezone) : new Date()),
+      resetDate: () => setSelectedDay(defaultDate ? toZonedTime(defaultDate, "UTC") : new Date()),
       resetSelectedTimeState: () => setSelectedStartTime(undefined),
     };
 
@@ -530,8 +528,8 @@ export const ScheduleMeeting: React.FC<Props> = ({
 
 
   const updateCalendar = (activeStartDate: Date) => {
-    const timezonedActiveStartDate = fromZonedTime(activeStartDate, timezone);
-    const timezonedSelectedDay = fromZonedTime(selectedDay, timezone);
+    const timezonedActiveStartDate = toZonedTime(activeStartDate, timezone);
+    const timezonedSelectedDay = toZonedTime(selectedDay, timezone);
     const sameMonth = isSameMonth(timezonedSelectedDay, timezonedActiveStartDate);
     setSelectedDay(timezonedActiveStartDate);
 
@@ -669,7 +667,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
               <Arrow direction="back" />
             </ArrowButton>
             <SelectedDayTitle className="rsm-date-title">
-              {formatInTimeZone(selectedDay, timezone, format_selectedDateMonthTitleFormatString)}
+              {`${new Date(selectedDay).toLocaleDateString(undefined, { year: 'numeric', month: 'long', timeZone: timezone })}`}
             </SelectedDayTitle>
             <ArrowButton type="button" className="rsm-arrow-button" onClick={goToNextMonth}>
               <Arrow direction="forward" />
@@ -707,7 +705,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
 
                   <Header>
                     <SelectedDayTitle className="rsm-date-title">
-                      {formatInTimeZone(selectedDay, timezone, format_selectedDateDayTitleFormatString)}
+                      {`${new Date(selectedDay).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', timeZone: timezone })}`}
                     </SelectedDayTitle>
                   </Header>
 

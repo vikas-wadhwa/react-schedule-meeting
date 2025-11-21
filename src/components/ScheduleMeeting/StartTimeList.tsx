@@ -7,6 +7,7 @@ import { StartTimeEvent } from './ScheduleMeeting';
 import { Locale, getDay, isValid, startOfMonth } from 'date-fns';
 import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { styled } from 'goober';
+import { getTimezoneOffsetMs } from '../../utils/dateUtils';
 
 // @TODO okay this is getting a little silly maybe its time to consider context.
 type Props = {

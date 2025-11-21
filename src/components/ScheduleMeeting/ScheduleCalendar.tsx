@@ -28,7 +28,7 @@ import { setup, styled } from 'goober';
 
 import { StartTimeEvent } from './ScheduleMeeting';
 import { shouldForwardProp } from 'goober/should-forward-prop';
-import { createZonedDate } from '../../utils/dateUtils';
+import { normalizeCalendarTileDate } from '../../utils/dateUtils';
 
 setup(React.createElement,undefined, undefined, shouldForwardProp((prop) => {
   // Do NOT forward props that start with `$` symbol
@@ -274,10 +274,10 @@ const formatDate = (date: Date, timezone: string, locale?: Locale) => {
   return formatInTimeZone(date, timezone, 'MM/dd/yyyy');
 };
 
-const formateDateFromLocal = (date: Date, timezone: string, locale?: Locale) => {
-  const newDate = fromZonedTime(date, timezone);
-  return formatDate(newDate, timezone);
-};
+// const formatDateFromLocal = (date: Date, timezone: string, locale?: Locale) => {
+//   const newDate = fromZonedTime(date, "UTC");
+//   return formatDate(newDate, "UTC");
+// };
 
 
 const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDaySelected, selectedDay, locale, timezone }) => {
@@ -301,29 +301,26 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
   }, [startTimeEventsList, timezone]);
 
   const _onClickDay = (day: Date) => {
-
-    // debugger;
-    
-    // const year = day.getFullYear();
-    // const month = day.getMonth();
-    // const date = day.getDate();
-
-    // const localDate = new Date(year, month, date);
-    const timezoneAdjustedDay = createZonedDate(day, timezone);
-
-    onDaySelected(timezoneAdjustedDay);
+    const zonedDate = toZonedTime(
+      new Date(day.getFullYear(), day.getMonth(), day.getDate()),
+      timezone
+    );
+    onDaySelected(zonedDate);
   };
 
-  const _isTileDisabled = (props: TileArgs) => {
-    if (props.view !== 'month') return false;
-    const dateStr = formateDateFromLocal(props.date, timezone);
+    const _isTileDisabled = (props: TileArgs) => {
+    if (props.view !== 'month')
+      return false;
+    const correctedDate = normalizeCalendarTileDate(props.date, timezone);
+    const dateStr = formatInTimeZone(correctedDate, timezone, 'MM/dd/yyyy');
+
     const hasAvailable = daysAvailable.some((date) => date === dateStr);
-    const key = formatInTimeZone(props.date, timezone, 'yyyy-MM-dd');
     return !hasAvailable;
   };
 
-  const _renderClassName = (props: TileArgs) => {
-    if (daysAvailable.some((date) => date === formateDateFromLocal(props.date, timezone))) return ['day-tile', 'active-day-tile'];
+    const _renderClassName = (props: TileArgs) => {
+    if (daysAvailable.some((date) => date === formatInTimeZone(normalizeCalendarTileDate(props.date, timezone), timezone, 'MM/dd/yyyy')))
+      return ['day-tile', 'active-day-tile'];
     return (props.view === 'month' && 'day-tile') || null;
   };
 
