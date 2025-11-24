@@ -276,6 +276,7 @@ const formatDate = (date: Date, timezone: string, locale?: Locale) => {
 
 const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDaySelected, selectedDay, locale, timezone }) => {
   const [daysAvailable, setDaysAvailable] = useState<Array<any>>([]);
+  const deviceTzid = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   useEffect(() => {
     const daysInTimeslots: string[] = [];
@@ -297,7 +298,7 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
   const _onClickDay = (day: Date) => {
     // we're first getting the date at midnight in the device timezone
     // then converting that to the selected timezone
-    const deviceTzid = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
     // this gets just the date portion as string in device timezone
     const zonedDateString = getLocalMidnightDateString(day, deviceTzid);
     // cast that string as a date in the selected timezone
@@ -308,18 +309,17 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
     const _isTileDisabled = (props: TileArgs) => {
     if (props.view !== 'month')
       return false;
-    const correctedDate = getLocalMidnightDate(props.date, timezone);
-    const dateStr = formatInTimeZone(correctedDate, timezone, 'MM/dd/yyyy');
+    const correctedDateISO = getLocalMidnightDateString(props.date, deviceTzid);
+    const dateStr = formatInTimeZone(correctedDateISO, timezone, 'MM/dd/yyyy');
     const hasAvailable = daysAvailable.some((date) => date === dateStr);
     return !hasAvailable;
   };
 
     const _renderClassName = (props: TileArgs) => {
     const dayIsActive = daysAvailable.some((date) => {
-      const formattedDate = formatInTimeZone(getLocalMidnightDate(props.date, timezone), timezone, 'MM/dd/yyyy');
-      if (date === formattedDate)
-        console.log("matched date:", date, props.date);
-      return date === formattedDate;
+      const correctedDateISO = getLocalMidnightDateString(props.date, deviceTzid);
+      const dateStr = formatInTimeZone(correctedDateISO, timezone, 'MM/dd/yyyy');
+      return date === dateStr;
     });
 
     if (dayIsActive) {
@@ -332,8 +332,6 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
   /**
    * KEY COMPONENT FOR CORRECT DAY HIGHLIGHTING
    */
-  // getting device timezone
-  const deviceTzid = Intl.DateTimeFormat().resolvedOptions().timeZone;
   // getting selected day ISO string in selected timezone
   const valueISO = getLocalMidnightDateString(selectedDay, timezone);
   // converting that to device timezone date for react calendar to highlight correct day

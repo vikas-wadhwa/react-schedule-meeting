@@ -26,6 +26,7 @@ import StartTimeList from './StartTimeList';
 import { styled } from 'goober';
 import Select from 'react-select';
 import TimeZonePicker from './TimeZonePicker';
+import { getLocalMidnightDateString } from '../../utils/dateUtils';
 
 /*
 TODO:
@@ -319,7 +320,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
   const [selectedStartTime, setSelectedStartTime] = useState<number | undefined>(
     _selectedStartTime ? _selectedStartTime.getTime() : undefined,
   );
-  const [selectedDay, setSelectedDay] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(new Date(defaultDate!));
   const [timezone, setTimezone] = useState(scheduler.timezone || 'America/Chicago');
   const [clockNotation, setClockNotation] = useState<number | string>(scheduler.clock_notation || 12);
   const [startTimeEventsList, setStartTimeEventsList] = useState([] as StartTimeEvent[]);
@@ -376,33 +377,40 @@ export const ScheduleMeeting: React.FC<Props> = ({
     const orderedStartTimeEvents = buildStartTimeEvents(timezone);
 
     // set initial display date (also update when timezone changes)
-    if (defaultDate) {
-      setSelectedDay(toZonedTime(defaultDate, timezone));
-    }
+    // if (defaultDate) {
+    //   setSelectedDay(toZonedTime(defaultDate, timezone));
+    // }
 
     setStartTimeEventsList(orderedStartTimeEvents);
-  }, [orderedAvailableTimeslots, eventDurationInMinutes, eventStartTimeSpreadInMinutes, defaultDate, timezone]);
+  }, [orderedAvailableTimeslots, eventDurationInMinutes, eventStartTimeSpreadInMinutes, defaultDate]);
+
+  useEffect(() => {
+    setSelectedDay(defaultDate!);
+  }, []);
 
   const handleTimezoneChange = (iana: string | null) => {
     if (!iana) return;
 
-    const year = selectedDay.getFullYear();
-    const month = selectedDay.getMonth();
-    const date = selectedDay.getDate();
+    // const year = selectedDay.getFullYear();
+    // const month = selectedDay.getMonth();
+    // const date = selectedDay.getDate();
 
-    const newSelectedDate = fromZonedTime(new Date(Date.UTC(year, month, date)), iana);
-
+    // const newSelectedDate = fromZonedTime(new Date(Date.UTC(year, month, date)), iana);
+    const zonedDateString = getLocalMidnightDateString(selectedDay, timezone);
+    const zonedDate = fromZonedTime(zonedDateString, iana);
     setTimeslotsLoading(true);
     setTimezone(iana);
-    setSelectedDay(newSelectedDate);
+    setSelectedDay(zonedDate);
 
-    if (defaultDate) {
-      const defaultYear = defaultDate.getFullYear();
-      const defaultMonth = defaultDate.getMonth();
-      const defaultDateNum = defaultDate.getDate();
-      const defaultNewSelectedDate = fromZonedTime(new Date(Date.UTC(defaultYear, defaultMonth, defaultDateNum)), iana);
-      setSelectedDay(defaultNewSelectedDate);
-    }
+    // if (defaultDate) {
+    //   // const defaultYear = defaultDate.getFullYear();
+    //   // const defaultMonth = defaultDate.getMonth();
+    //   // const defaultDateNum = defaultDate.getDate();
+    //   // const defaultNewSelectedDate = fromZonedTime(new Date(Date.UTC(defaultYear, defaultMonth, defaultDateNum)), iana);
+    //   const defaultZonedDateString = getLocalMidnightDateString(defaultDate, timezone);
+    //   const defaultNewSelectedDate = fromZonedTime(defaultZonedDateString, iana);
+    //   setSelectedDay(defaultNewSelectedDate);
+    // }
 
     onTimeZoneChange?.(iana);
   };
