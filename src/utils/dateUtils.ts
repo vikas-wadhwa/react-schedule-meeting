@@ -1,15 +1,15 @@
 import { fromZonedTime } from "date-fns-tz";
 
-export const createZonedDate = (date: Date, timezone: string): Date => {
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const day = date.getDate();
+// export const createZonedDate = (date: Date, timezone: string): Date => {
+//   const year = date.getFullYear();
+//   const month = date.getMonth();
+//   const day = date.getDate();
 
-  const localDate = new Date(year, month, day);
-  const timezoneAdjustedDay = fromZonedTime(localDate.toISOString().split('T')[0] + 'T12:00:00', timezone);
+//   const localDate = new Date(year, month, day);
+//   const timezoneAdjustedDay = fromZonedTime(localDate.toISOString().split('T')[0] + 'T12:00:00', timezone);
 
-  return timezoneAdjustedDay;
-}
+//   return timezoneAdjustedDay;
+// }
 
 
 export const getTimezoneAbbreviation = (timezone: string) => {
@@ -28,10 +28,9 @@ export const getTimezoneAbbreviation = (timezone: string) => {
 
 
 export const getTimezoneOffsetMs = (timeZone: string): number => {
-  // Use a fixed date so DST shifts are predictable. You can choose "now" if preferred.
     const now = new Date();
 
-    // Format the date in the target timezone and extract the UTC offset
+    // Format date in target timezone and get UTC offset
     const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone,
       timeZoneName: "shortOffset"
@@ -40,12 +39,10 @@ export const getTimezoneOffsetMs = (timeZone: string): number => {
     const parts = formatter.formatToParts(now);
     const offsetPart = parts.find(p => p.type === "timeZoneName");
 
-    // Example offsetPart.value formats:
-    // "UTC", "UTC+1", "UTC-05:00", "GMT+3"
+    // "UTC", "UTC+1", "UTC-05:00", etc
     const match = offsetPart?.value.match(/([+-]\d{1,2})(?::(\d{2}))?/);
 
     if (!match) {
-      // UTC has no offset (`UTC`)
       return 0;
     }
 
@@ -56,14 +53,12 @@ export const getTimezoneOffsetMs = (timeZone: string): number => {
 }
 
 
-export const normalizeCalendarTileDate = (date: Date, timezone: string) => {
-  // Convert browser-local date to "midnight in selected timezone"
-  return fromZonedTime(
-    new Date(Date.UTC(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate()
-    )),
-    timezone
-  );
+export const getLocalMidnightDateString = (date: Date, timezone: string) => {
+  return date.toLocaleString("sv", { timeZone: timezone }).split(" ")[0];
 }
+
+export const getLocalMidnightDate = (date: Date, timezone: string) => {
+  const dayLocal = getLocalMidnightDateString(date, timezone);
+  const zonedDate = fromZonedTime(dayLocal, timezone);
+  return zonedDate;
+};

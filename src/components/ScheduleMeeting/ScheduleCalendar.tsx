@@ -28,7 +28,7 @@ import { setup, styled } from 'goober';
 
 import { StartTimeEvent } from './ScheduleMeeting';
 import { shouldForwardProp } from 'goober/should-forward-prop';
-import { normalizeCalendarTileDate } from '../../utils/dateUtils';
+import { getLocalMidnightDate, getLocalMidnightDateString } from '../../utils/dateUtils';
 
 setup(React.createElement,undefined, undefined, shouldForwardProp((prop) => {
   // Do NOT forward props that start with `$` symbol
@@ -274,12 +274,6 @@ const formatDate = (date: Date, timezone: string, locale?: Locale) => {
   return formatInTimeZone(date, timezone, 'MM/dd/yyyy');
 };
 
-// const formatDateFromLocal = (date: Date, timezone: string, locale?: Locale) => {
-//   const newDate = fromZonedTime(date, "UTC");
-//   return formatDate(newDate, "UTC");
-// };
-
-
 const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDaySelected, selectedDay, locale, timezone }) => {
   const [daysAvailable, setDaysAvailable] = useState<Array<any>>([]);
 
@@ -301,28 +295,49 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
   }, [startTimeEventsList, timezone]);
 
   const _onClickDay = (day: Date) => {
-    const zonedDate = toZonedTime(
-      new Date(day.getFullYear(), day.getMonth(), day.getDate()),
-      timezone
-    );
+    // we're first getting the date at midnight in the device timezone
+    // then converting that to the selected timezone
+    const deviceTzid = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // this gets just the date portion as string in device timezone
+    const zonedDateString = getLocalMidnightDateString(day, deviceTzid);
+    // cast that string as a date in the selected timezone
+    const zonedDate = fromZonedTime(zonedDateString, timezone);
     onDaySelected(zonedDate);
   };
 
     const _isTileDisabled = (props: TileArgs) => {
     if (props.view !== 'month')
       return false;
-    const correctedDate = normalizeCalendarTileDate(props.date, timezone);
+    const correctedDate = getLocalMidnightDate(props.date, timezone);
     const dateStr = formatInTimeZone(correctedDate, timezone, 'MM/dd/yyyy');
-
     const hasAvailable = daysAvailable.some((date) => date === dateStr);
     return !hasAvailable;
   };
 
     const _renderClassName = (props: TileArgs) => {
-    if (daysAvailable.some((date) => date === formatInTimeZone(normalizeCalendarTileDate(props.date, timezone), timezone, 'MM/dd/yyyy')))
+    const dayIsActive = daysAvailable.some((date) => {
+      const formattedDate = formatInTimeZone(getLocalMidnightDate(props.date, timezone), timezone, 'MM/dd/yyyy');
+      if (date === formattedDate)
+        console.log("matched date:", date, props.date);
+      return date === formattedDate;
+    });
+
+    if (dayIsActive) {
       return ['day-tile', 'active-day-tile'];
+    }
+
     return (props.view === 'month' && 'day-tile') || null;
   };
+
+  /**
+   * KEY COMPONENT FOR CORRECT DAY HIGHLIGHTING
+   */
+  // getting device timezone
+  const deviceTzid = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // getting selected day ISO string in selected timezone
+  const valueISO = getLocalMidnightDateString(selectedDay, timezone);
+  // converting that to device timezone date for react calendar to highlight correct day
+  const value = fromZonedTime(valueISO, deviceTzid); 
 
   return (
     <StyledCalendar
@@ -332,7 +347,7 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
       showNavigation={false}
       tileDisabled={_isTileDisabled}
       tileClassName={_renderClassName}
-      value={selectedDay}
+      value={value}
       activeStartDate={startOfMonth(selectedDay)}
       calendarType={'gregory'}
     />

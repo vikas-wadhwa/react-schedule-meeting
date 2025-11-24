@@ -27,6 +27,11 @@ import { styled } from 'goober';
 import Select from 'react-select';
 import TimeZonePicker from './TimeZonePicker';
 
+/*
+TODO:
+1. handle Hawaii date change on selecting timeslot after local midnight but before hawaii midnight
+*/
+
 type StyleVariables = {
   $borderRadius: number;
   $primaryColorRGB: string;
@@ -469,11 +474,8 @@ export const ScheduleMeeting: React.FC<Props> = ({
   useEffect(() => {
     const startTimeEventsToDisplay: StartTimeEvent[] = [];
 
-    // filter out startTimeEvents so we get the list of ones to display next to the calendar
     for (const startTimeEvent of startTimeEventsList) {
-      // make sure its the same day as the selected day
       if (isSameDay(new Date(startTimeEvent.startTime), selectedDay)) {
-        // prevents duplicate times (in case there are multiple overlapping shifts)
         if (
           startTimeEventsToDisplay.filter((item: StartTimeEvent) =>
             isSameMinute(item.startTime, startTimeEvent.startTime),
@@ -486,7 +488,6 @@ export const ScheduleMeeting: React.FC<Props> = ({
       }
     }
 
-    // order the events by first in the day
     const orderedEvents = startTimeEventsToDisplay.sort(
       (a: StartTimeEvent, b: StartTimeEvent) => a.startTime.getTime() - b.startTime.getTime(),
     );
