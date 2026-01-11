@@ -1,10 +1,34 @@
-import Calendar, { CalendarTileProperties } from 'react-calendar';
-import { Locale, format, isValid, startOfMonth } from 'date-fns';
+import Calendar from 'react-calendar';
+
+import type {
+  Action,
+  CalendarType,
+  ClassName,
+  DeprecatedCalendarType,
+  Detail,
+  LooseValue,
+  NavigationLabelFunc,
+  OnArgs,
+  OnClickFunc,
+  OnClickWeekNumberFunc,
+  Range,
+  TileArgs,
+  TileClassNameFunc,
+  TileContentFunc,
+  TileDisabledFunc,
+  Value,
+  View,
+} from 'react-calendar/dist/esm/shared/types.js';
+
+import { Locale, getDay, isValid, parseISO, startOfMonth } from 'date-fns';
+import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz';
+
 import React, { useEffect, useState } from 'react';
 import { setup, styled } from 'goober';
 
 import { StartTimeEvent } from './ScheduleMeeting';
 import { shouldForwardProp } from 'goober/should-forward-prop';
+import { createZonedDate } from '../../utils/dateUtils';
 
 setup(React.createElement,undefined, undefined, shouldForwardProp((prop) => {
   // Do NOT forward props that start with `$` symbol
@@ -84,7 +108,7 @@ const StyledCalendar = styled(Calendar)`
     color: rgba(var(--text-color-rgb), .9);
     padding: 5px;
     position: relative;
-    z-index: 1;
+    z-index: 0;
     &::after {
       content: '';
       position: absolute;
@@ -127,18 +151,25 @@ const StyledCalendar = styled(Calendar)`
   }
 
   .react-calendar__tile--now.day-tile {
-    background: rgba(var(--background-color-rgb), 1);
+    color: white !important;
+
     &::after {
       border-radius: var(--border-radius);
-      background: rgba(var(--primary-color-rgb), 0.111);
+      background: rgba(150, 150, 150, 1);
+      border: none;
     }
   }
 
   .react-calendar__tile--now:hover.day-tile {
-    background: rgba(var(--background-color-rgb), 1);
+    border: none;
+    border-radius: var(--border-radius);
+    background: rgba(150, 150, 150, 1);
+    color: white !important;
+
     &::after {
       border-radius: var(--border-radius);
-      background: rgba(var(--primary-color-rgb), 0.111);
+      background: rgba(150, 150, 150, 1);
+      border: none;
     }
   }
 
@@ -149,9 +180,10 @@ const StyledCalendar = styled(Calendar)`
   .react-calendar__tile--active.day-tile {
     background: rgba(var(--background-color-rgb), 1);
     color: rgba(var(--primary-color-text-shade-rgb), 1);
+
     &::after {
       border-radius: var(--border-radius);
-      border: solid rgba(var(--primary-color-rgb), 0.111) 1px;
+      border: none;
     }
   }
 
@@ -162,9 +194,14 @@ const StyledCalendar = styled(Calendar)`
       border-radius: var(--border-radius);
       border: solid rgba(var(--primary-color-rgb), 1) 1px;
     }
+
     &.react-calendar__tile--now {
+      color: white !important;
+
       &::after {
-        background: rgba(var(--primary-color-rgb), 0.111);
+        border-radius: var(--border-radius);
+        background: rgba(150, 150, 150, 1);
+        border: none;
       }
     }
   }
@@ -193,6 +230,36 @@ const StyledCalendar = styled(Calendar)`
       min-height: 302px;
     }
   }
+
+  .react-calendar__tile { position: relative; }
+  .rsm-event-dot {
+    width: 15px;
+    height: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(var(--primary-color-rgb), 1);
+    color: #fff;
+    font-size: 10px;
+    line-height: 1;
+    text-align: center;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.12);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  /* single-event badge: smaller dot without text */
+  .rsm-event-dot.single {
+    width: 8px;
+    height: 8px;
+    font-size: 0;
+    padding: 0;
+  }
 `;
 
 type CalendarProps = {
@@ -200,20 +267,30 @@ type CalendarProps = {
   onDaySelected: (day: Date) => void;
   selectedDay: Date;
   locale?: Locale;
+  timezone: string;
 };
 
-const formatDate = (date: Date, locale?: Locale) => {
-  return format(date, 'MM/dd/yyyy', { locale });
+const formatDate = (date: Date, timezone: string, locale?: Locale) => {
+  return formatInTimeZone(date, timezone, 'MM/dd/yyyy');
 };
 
-const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDaySelected, selectedDay, locale }) => {
+const formateDateFromLocal = (date: Date, timezone: string, locale?: Locale) => {
+  const newDate = fromZonedTime(date, timezone);
+  return formatDate(newDate, timezone);
+};
+
+
+const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDaySelected, selectedDay, locale, timezone }) => {
   const [daysAvailable, setDaysAvailable] = useState<Array<any>>([]);
 
   useEffect(() => {
     const daysInTimeslots: string[] = [];
+
     startTimeEventsList.map((slot) => {
       if (!isValid(new Date(slot.startTime))) throw new Error(`Invalid date for start time on slot ${slot.availableTimeslot.id}`);
-      const date = formatDate(slot.startTime, locale);
+
+      const date = formatDate(new Date(slot.startTime), timezone);
+
       if (daysInTimeslots.indexOf(date) === -1) {
         daysInTimeslots.push(date);
       }
@@ -221,23 +298,38 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
     });
 
     setDaysAvailable(daysInTimeslots);
-  }, [startTimeEventsList]);
+  }, [startTimeEventsList, timezone]);
 
   const _onClickDay = (day: Date) => {
-    onDaySelected(day);
+
+    // debugger;
+    
+    // const year = day.getFullYear();
+    // const month = day.getMonth();
+    // const date = day.getDate();
+
+    // const localDate = new Date(year, month, date);
+    const timezoneAdjustedDay = createZonedDate(day, timezone);
+
+    onDaySelected(timezoneAdjustedDay);
   };
 
-  const _isTileDisabled = (props: CalendarTileProperties) => {
-    return props.view === 'month' && !daysAvailable.some((date) => date === formatDate(props.date, locale));
+  const _isTileDisabled = (props: TileArgs) => {
+    if (props.view !== 'month') return false;
+    const dateStr = formateDateFromLocal(props.date, timezone);
+    const hasAvailable = daysAvailable.some((date) => date === dateStr);
+    const key = formatInTimeZone(props.date, timezone, 'yyyy-MM-dd');
+    return !hasAvailable;
   };
 
-  const _renderClassName = (props: CalendarTileProperties) => {
-    if (daysAvailable.some((date) => date === formatDate(props.date, locale))) return ['day-tile', 'active-day-tile'];
+  const _renderClassName = (props: TileArgs) => {
+    if (daysAvailable.some((date) => date === formateDateFromLocal(props.date, timezone))) return ['day-tile', 'active-day-tile'];
     return (props.view === 'month' && 'day-tile') || null;
   };
 
   return (
     <StyledCalendar
+      showNeighboringMonth={false}
       defaultView={'month'}
       onClickDay={_onClickDay}
       showNavigation={false}
@@ -245,6 +337,7 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
       tileClassName={_renderClassName}
       value={selectedDay}
       activeStartDate={startOfMonth(selectedDay)}
+      calendarType={'gregory'}
     />
   );
 };
