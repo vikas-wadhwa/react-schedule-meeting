@@ -28,11 +28,17 @@ import { setup, styled } from 'goober';
 
 import { StartTimeEvent } from './ScheduleMeeting';
 import { shouldForwardProp } from 'goober/should-forward-prop';
+import { createZonedDate } from '../../utils/dateUtils';
 
-setup(React.createElement,undefined, undefined, shouldForwardProp((prop) => {
-  // Do NOT forward props that start with `$` symbol
-  return prop['0'] !== '$';
-}));
+setup(
+  React.createElement,
+  undefined,
+  undefined,
+  shouldForwardProp((prop) => {
+    // Do NOT forward props that start with `$` symbol
+    return prop['0'] !== '$';
+  }),
+);
 
 const StyledCalendar = styled(Calendar)`
   &.react-calendar,
@@ -124,6 +130,11 @@ const StyledCalendar = styled(Calendar)`
     font-size: 15.33px;
   }
 
+  .react-calendar__month-view__days__day {
+    aspect-ratio: 1 / 1;
+    height: auto;
+  }
+
   .react-calendar__month-view__days__day--neighboringMonth {
     color: rgba(var(--text-color-rgb), .6);
   }
@@ -146,15 +157,16 @@ const StyledCalendar = styled(Calendar)`
   }
 
   .react-calendar__tile:disabled.day-tile {
-    background: rgba(var(--background-color-rgb), 1);
+    opacity: 0.2;
+    cursor: not-allowed;
   }
 
   .react-calendar__tile--now.day-tile {
-    color: white !important;
+    color: black !important;
 
     &::after {
       border-radius: var(--border-radius);
-      background: rgba(150, 150, 150, 1);
+      background: var(--bs-gray-200);
       border: none;
     }
   }
@@ -162,12 +174,12 @@ const StyledCalendar = styled(Calendar)`
   .react-calendar__tile--now:hover.day-tile {
     border: none;
     border-radius: var(--border-radius);
-    background: rgba(150, 150, 150, 1);
-    color: white !important;
+    background: var(--bs-gray-200);
+    color: black !important;
 
     &::after {
       border-radius: var(--border-radius);
-      background: rgba(150, 150, 150, 1);
+      background: var(--bs-gray-200);
       border: none;
     }
   }
@@ -191,16 +203,16 @@ const StyledCalendar = styled(Calendar)`
     &::after {
       background: rgba(var(--primary-color-rgb), 0.222)
       border-radius: var(--border-radius);
-      border: solid rgba(var(--primary-color-rgb), 1) 1px;
+      border: solid rgba(0, 0, 0, 1) 3px;
     }
 
     &.react-calendar__tile--now {
-      color: white !important;
+      color: black !important;
 
       &::after {
         border-radius: var(--border-radius);
-        background: rgba(150, 150, 150, 1);
-        border: none;
+        background: var(--bs-gray-200);
+        border: solid rgba(0, 0, 0, 1) 3px;
       }
     }
   }
@@ -232,33 +244,44 @@ const StyledCalendar = styled(Calendar)`
 
   .react-calendar__tile { position: relative; }
   .rsm-event-dot {
-    width: 15px;
-    height: 15px;
+    width: 2.5rem;
+    height: 2.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    background: rgba(var(--primary-color-rgb), 1);
+    background: rgb(0, 122, 255);
     color: #fff;
-    font-size: 10px;
+    font-size: 1.25rem;
     line-height: 1;
     text-align: center;
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 2px;
+    right: 2px;
     z-index: 2;
     box-shadow: 0 1px 0 rgba(0,0,0,0.12);
     white-space: nowrap;
     overflow: hidden;
   }
 
-  /* single-event badge: smaller dot without text */
-  .rsm-event-dot.single {
-    width: 8px;
-    height: 8px;
-    font-size: 0;
-    padding: 0;
+  .custom-tile {
+    &::after {
+      inset: 5px;
+      border: 1px solid rgb(150, 150, 150);
+      border-radius: var(--border-radius);
+      content: ""; // required for ::after to render
+      position: absolute;
+    }
+
+    &.rsm-blackout-tile {
+      color: white !important;
+    }
+
+    &.rsm-blackout-tile::after {
+      background-color: #f05d2a !important;
+    }
   }
+
 `;
 
 type CalendarProps = {
@@ -267,7 +290,18 @@ type CalendarProps = {
   selectedDay: Date;
   locale?: Locale;
   timezone: string;
-  eventList?: { id: number, title: string, start: string, end: string, speaker_event_user_id: number, status: string, url: string }[];
+  eventList?: {
+    id: number;
+    title: string;
+    start: string;
+    end: string;
+    speaker_event_user_id: number;
+    status: string;
+    url: string;
+  }[];
+  blackoutDates?: Record<string, number>;
+  ignoreScheduler: boolean;
+  setDateToShow: React.Dispatch<React.SetStateAction<Date | undefined>>;
 };
 
 const formatDate = (date: Date, timezone: string, locale?: Locale) => {
@@ -279,14 +313,23 @@ const formateDateFromLocal = (date: Date, timezone: string, locale?: Locale) => 
   return formatDate(newDate, timezone);
 };
 
-
-const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDaySelected, selectedDay, locale, timezone, eventList = [] }) => {
+const ScheduleCalendar: React.FC<CalendarProps> = ({
+  startTimeEventsList,
+  onDaySelected,
+  selectedDay,
+  locale,
+  timezone,
+  eventList = [],
+  blackoutDates = {},
+  ignoreScheduler = false,
+  setDateToShow
+}) => {
   const [daysAvailable, setDaysAvailable] = useState<Array<any>>([]);
   const [eventCounts, setEventCounts] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
     const counts: { [key: string]: number } = {};
-    
+
     if (!eventList || eventList.length === 0) {
       setEventCounts({});
       return;
@@ -309,7 +352,8 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
     const daysInTimeslots: string[] = [];
 
     startTimeEventsList.map((slot) => {
-      if (!isValid(new Date(slot.startTime))) throw new Error(`Invalid date for start time on slot ${slot.availableTimeslot.id}`);
+      if (!isValid(new Date(slot.startTime)))
+        throw new Error(`Invalid date for start time on slot ${slot.availableTimeslot.id}`);
 
       const date = formatDate(new Date(slot.startTime), timezone);
 
@@ -323,18 +367,27 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
   }, [startTimeEventsList, timezone]);
 
   const _onClickDay = (day: Date) => {
-    
-    const year = day.getFullYear();
-    const month = day.getMonth();
-    const date = day.getDate();
 
-    const localDate = new Date(year, month, date);
-    const timezoneAdjustedDay = fromZonedTime(localDate.toISOString().split('T')[0] + 'T00:00:00', timezone);
+    const timezoneAdjustedDay = createZonedDate(day, timezone);
 
     onDaySelected(timezoneAdjustedDay);
+    setDateToShow(timezoneAdjustedDay);
   };
 
   const _isTileDisabled = (props: TileArgs) => {
+    if (ignoreScheduler) {
+      const key = createZonedDate(props.date, timezone).toISOString().split('T')[0];
+      const hasEvent = (eventCounts[key] || 0) > 0;
+      const today = new Date();
+      const todayKey = today.toISOString().split('T')[0];
+      const isTodayOrFuture = key >= todayKey;
+      if (hasEvent || isTodayOrFuture) {
+        return false;
+      }
+
+      return true;
+    }
+
     if (props.view !== 'month') return false;
     const dateStr = formateDateFromLocal(props.date, timezone);
     const hasAvailable = daysAvailable.some((date) => date === dateStr);
@@ -344,8 +397,19 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
   };
 
   const _renderClassName = (props: TileArgs) => {
-    if (daysAvailable.some((date) => date === formateDateFromLocal(props.date, timezone))) return ['day-tile', 'active-day-tile'];
-    return (props.view === 'month' && 'day-tile') || null;
+    let classNames = [];
+    if (daysAvailable.some((date) => date === formateDateFromLocal(props.date, timezone)))
+      classNames.push('day-tile', 'active-day-tile');
+    else if (props.view === 'month') classNames.push('day-tile');
+    const keyDate = createZonedDate(props.date, timezone);
+    const key = keyDate.toISOString().split('T')[0];
+    if (key in blackoutDates) {
+      classNames.push('rsm-blackout-tile');
+    }
+    if (ignoreScheduler && props.view === 'month') {
+      classNames.push('custom-tile');
+    }
+    return classNames.length > 0 ? classNames : null;
   };
 
   return (
@@ -359,13 +423,20 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({ startTimeEventsList, onDayS
       value={selectedDay}
       activeStartDate={startOfMonth(selectedDay)}
       calendarType={'gregory'}
-      tileContent={({date, view}) => {
+      tileContent={({ date, view }) => {
         if (view !== 'month') return null;
-        const key = formatInTimeZone(date, timezone, 'yyyy-MM-dd');
-        const count = eventCounts[key] || 0;
-        if (count === 0) return null;
-        const classes = `rsm-event-dot${count === 1 ? ' single' : ''}`;
-        return React.createElement("div", { className: classes, "aria-label": count === 1 ? '1 event' : `${count} events` }, count > 1 ? count : '');
+        const key = createZonedDate(date, timezone).toISOString().split('T')[0];
+        const eventCount = eventCounts[key] || 0;
+
+        return (
+          <>
+            {eventCount > 0 && (
+              <div className={`rsm-event-dot`} aria-label={eventCount === 1 ? '1 event' : `${eventCount} events`}>
+                {eventCount > 1 ? eventCount : ''}
+              </div>
+            )}
+          </>
+        );
       }}
     />
   );

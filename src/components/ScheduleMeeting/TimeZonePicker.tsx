@@ -42,7 +42,7 @@ function buildGroupsFromLabels(labels: Record<string, string>): TZGroup[] {
 
   const favoriteIds = new Set([
     "America/Los_Angeles","America/Denver","America/Chicago","America/New_York",
-    "America/Anchorage","America/Phoenix","America/St_Johns","Pacific/Honolulu",
+    "America/Juneau","America/Phoenix","America/St_Johns","Pacific/Honolulu",
   ])
 
   const territoryIds = new Set([

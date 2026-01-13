@@ -16,14 +16,14 @@ export default [
       typescript({
         typescript: require('typescript'),
       }),
-      cleanup({extensions: ['ts', 'tsx']}),
+      cleanup({ extensions: ['ts', 'tsx'] }),
       // terser(),
       visualizer(),
     ],
     output: [
       { file: pkg.module, format: 'esm' },
       {
-        file: 'dist/index.esm.js',
+        file: 'dist/react-calendar-manager.js',
         format: 'es',
         banner: '/* eslint-disable */',
       },
