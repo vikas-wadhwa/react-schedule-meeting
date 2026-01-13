@@ -72,8 +72,8 @@ const Divider = styled('div')`
   }
 `;
 
-const CalendarContainer = styled('div')<{ $hideLeftPanel?: boolean }>`
-  padding: ${({ $hideLeftPanel }) => $hideLeftPanel ? '0' : '0 4rem'};
+const CalendarContainer = styled('div') <{ $hideLeftPanel?: boolean }>`
+  padding: ${({ $hideLeftPanel }) => $hideLeftPanel ? '0' : '0 4rem 0 0'};
   flex: none;
   width: ${({ $hideLeftPanel }) => $hideLeftPanel ? '0px' : '50%'};
   min-width: 0;
@@ -106,7 +106,6 @@ const OverlayMessage = styled('div')`
 
 const StartTimeListContainer = styled('div')`
   flex: 1;
-  overflow-y: scroll;
   position: relative;
   @media (max-width: 768px) {
     min-height: 301px;
