@@ -36,9 +36,13 @@ type StyleVariables = {
   $backgroundColorRGB: string;
   $primaryColorContrastRGB: string;
   $calendarColoredTextRGB: string;
+  $hideLeftPanel?: boolean
 };
 
 const Container = styled('div') <StyleVariables>`
+  @media (max-width: 768px) {
+    height: ${({ $hideLeftPanel }) => $hideLeftPanel ? '100vh' : 'auto'};
+  }
   width: 100%;
   display: flex;
   align-items: center;
@@ -55,6 +59,7 @@ const Container = styled('div') <StyleVariables>`
 
 const Inner = styled('div')`
   width: 100%;
+  height: 100%;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -63,22 +68,32 @@ const Inner = styled('div')`
   }
 `;
 
-const Divider = styled('div')`
+const Divider = styled('div') <{ $hideLeftPanel?: boolean }>`
   width: 1px;
   background: rgba(200, 200, 200);
   @media (max-width: 768px) {
     width: auto;
-    height: 1px;
+    height: ${({ $hideLeftPanel }) => $hideLeftPanel ? '0px' : '1px'};
   }
 `;
 
 const CalendarContainer = styled('div') <{ $hideLeftPanel?: boolean }>`
-  padding: ${({ $hideLeftPanel }) => $hideLeftPanel ? '0' : '0 4rem 0 0'};
+  padding: 0;
   flex: none;
-  width: ${({ $hideLeftPanel }) => $hideLeftPanel ? '0px' : '50%'};
+  height: ${({ $hideLeftPanel }) => $hideLeftPanel ? '0px' : 'auto'};
+  width: 100%;
   min-width: 0;
   overflow: hidden;
   transition: width 0.35s ease, padding 0.25s ease;
+
+  @media (min-width: 768px) {
+    padding: ${({ $hideLeftPanel }) => $hideLeftPanel ? '0' : '0 4rem 0 0'};
+    flex: none;
+    width: ${({ $hideLeftPanel }) => $hideLeftPanel ? '0px' : '50%'};
+    min-width: 0;
+    overflow: hidden;
+    transition: width 0.35s ease, padding 0.25s ease;
+  }
 `;
 
 const OverlayMessageWrapper = styled('div')`
@@ -657,6 +672,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
       $backgroundColorRGB={backgroundColorRGB}
       $primaryColorContrastRGB={primaryColorContrastRGB}
       $calendarColoredTextRGB={calendarColoredTextRGB}
+      $hideLeftPanel={hideLeftPanel}
     >
       <Inner className="rs-container">
         {renderOverlayMessage()}
@@ -674,8 +690,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
 
 
               <style>{`
-                .rselect__control { min-width: 36rem; }
-                .rselect__menu    { width: 40rem; }
+                
                 .rselect__menu-list { width: 100%; }
 
                 .rselect__option .tz-offset { color: #9ca3af; }
@@ -691,7 +706,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
                 classNamePrefix="rselect"
                 name="timezone"
                 noOptionsMessage={() => "No timezones found"}
-                styles={{ container: (base: any) => ({ ...base, width: "40rem" }) }}
+                styles={{ container: (base: any) => ({ ...base }) }}
               />
             </div>
 
@@ -726,7 +741,7 @@ export const ScheduleMeeting: React.FC<Props> = ({
           />
         </CalendarContainer>
 
-        <Divider />
+        <Divider $hideLeftPanel={hideLeftPanel} />
 
         <StartTimeListContainer className="rs-timelist-container" style={{ opacity: overlay_opacity() }}>
           <StartTimeListContainerAbsolute>

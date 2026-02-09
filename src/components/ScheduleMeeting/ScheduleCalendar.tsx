@@ -244,15 +244,15 @@ const StyledCalendar = styled(Calendar)`
 
   .react-calendar__tile { position: relative; }
   .rsm-event-dot {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     background: rgb(0, 122, 255);
     color: #fff;
-    font-size: 1.25rem;
+    font-size: 1rem;
     line-height: 1;
     text-align: center;
     position: absolute;
